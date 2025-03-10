@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -38,9 +39,7 @@ public class MainActivity extends AppCompatActivity {
         _cameraExecutor = Executors.newSingleThreadExecutor();
 
         if(!Permissions.hasPermissions(PERMS, this)){
-            //TODO: bitch to the user about permissions
             Permissions.requestPermissions(PERMS, 1000, this);
-
         }
 
         startCamera();
@@ -59,13 +58,18 @@ public class MainActivity extends AppCompatActivity {
                 _frameReader = new ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build();
-                _frameReader.setAnalyzer(ContextCompat.getMainExecutor(this), image -> {});
+                _frameReader.setAnalyzer(ContextCompat.getMainExecutor(this), this::onFrameReceive);
                 Camera camera = _cameraProvider.bindToLifecycle(
                         this, cameraSelector, _cameraPreview, _frameReader);
             } catch (InterruptedException | ExecutionException e) {
                 Log.e("Camera", "Use case binding failed", e);
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void onFrameReceive(ImageProxy image){
+        System.out.println("aa");   
+        image.close();
     }
 
     private void stopCamera(){
