@@ -2,6 +2,7 @@ package com.example.camera;
 
 import android.content.Context;
 import android.util.Log;
+import android.view.SurfaceView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
@@ -54,7 +55,7 @@ public class Camera {
                         .build();
                 _frameReader.setAnalyzer(ContextCompat.getMainExecutor(_activity), this::onFrameReceive);
                 androidx.camera.core.Camera camera = _cameraProvider.bindToLifecycle(
-                        _activity, cameraSelector, _cameraPreview, _frameReader);
+                        _activity, cameraSelector, new SurfaceView(_activity), _frameReader);
             } catch (InterruptedException | ExecutionException e) {
                 Log.e("Camera", "Use case binding failed", e);
             }

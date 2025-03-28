@@ -1,0 +1,1 @@
+DB_KEY = r'C:\Users\ori\Documents\Programming\FirebaseKeys\chiro-plate-key.json'

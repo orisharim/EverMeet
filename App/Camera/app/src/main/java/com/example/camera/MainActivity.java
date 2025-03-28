@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+    private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
     private Camera _localCam;
 
     @Override
@@ -47,8 +47,11 @@ public class MainActivity extends AppCompatActivity {
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onFrameReceive(ImageProxy frame){
         Image img = frame.getImage();
-        
-        img.getPlanes()
+        if(img != null){
+            Image.Plane[] pixels = img.getPlanes();
+
+        }
+
     }
 
     @Override
