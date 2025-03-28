@@ -2,12 +2,15 @@ package com.example.camera;
 
 
 import android.Manifest;
+import android.media.Image;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.Camera;
+
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
@@ -24,62 +27,34 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
 
     private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
-    private PreviewView _previewView;
-    private ProcessCameraProvider _cameraProvider;
-    private Preview _cameraPreview;
-    private ExecutorService _cameraExecutor;
-    private ImageAnalysis _frameReader;
+    private Camera _localCam;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        _previewView = findViewById(R.id.previewView);
-        _cameraExecutor = Executors.newSingleThreadExecutor();
+        _localCam = new Camera(this, findViewById(R.id.previewView));
 
         if(!Permissions.hasPermissions(PERMS, this)){
             Permissions.requestPermissions(PERMS, 1000, this);
         }
 
-        startCamera();
+        _localCam.startLocalCamera();
 
     }
 
-    private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        cameraProviderFuture.addListener(() -> {
-            try {
-                _cameraProvider = cameraProviderFuture.get();
-                _cameraPreview = new Preview.Builder().build();
-                _cameraPreview.setSurfaceProvider(_previewView.getSurfaceProvider());
-                CameraSelector cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
-                _cameraProvider.unbindAll();
-                _frameReader = new ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build();
-                _frameReader.setAnalyzer(ContextCompat.getMainExecutor(this), this::onFrameReceive);
-                Camera camera = _cameraProvider.bindToLifecycle(
-                        this, cameraSelector, _cameraPreview, _frameReader);
-            } catch (InterruptedException | ExecutionException e) {
-                Log.e("Camera", "Use case binding failed", e);
-            }
-        }, ContextCompat.getMainExecutor(this));
-    }
-
-    private void onFrameReceive(ImageProxy image){
-        System.out.println("aa");   
-        image.close();
-    }
-
-    private void stopCamera(){
-        _cameraExecutor.shutdown();
+    @OptIn(markerClass = ExperimentalGetImage.class)
+    private void onFrameReceive(ImageProxy frame){
+        Image img = frame.getImage();
+        
+        img.getPlanes()
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopCamera();
+        _localCam.stopCamera();
     }
 
 }
