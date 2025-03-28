@@ -1,36 +1,47 @@
 package com.example.camera;
 
+import android.util.Log;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-public class DataSender {
+public class UdpClient {
 
     private volatile byte[] _data;
     private final String _serverIp;
     private final int _serverPort;
+    private Consumer<byte[]> _dataHandler;
 
-    public DataSender(String serverIp, int serverPort){
+    public UdpClient(String serverIp, int serverPort, Consumer<byte[]> dataHandler){
         _serverIp = new String(serverIp);
         _serverPort = serverPort;
+        _dataHandler = dataHandler;
 
-
-        new Thread(() -> {
+        Thread a = new Thread(() -> {
             try {
                 DatagramSocket socket = new DatagramSocket();
                 InetAddress serverAddress = InetAddress.getByName(_serverIp);
-
                 while (true) {
                     DatagramPacket sendPacket = new DatagramPacket(_data, _data.length, serverAddress, _serverPort);
                     socket.send(sendPacket);
-                    System.out.println("Sent frame");
 
-                    Thread.sleep(1);
+                    byte[] receiveData = new byte[1024];
+                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                    socket.receive(receivePacket);
+                    if(_dataHandler != null)
+                        _dataHandler.accept(receiveData);
+
+                    socket.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        });
+        a.setDaemon(true);
+                a.start();
     }
 
     public void updateData(byte[] data){

@@ -1,38 +1,13 @@
 import tkinter as tk
 from Server import Server
 import threading
-import json
-from Database import Database
-import Settings 
-
-database = Database(Settings.DB_KEY)
-clients = {}  # structure of {plate_id(key): { 'user_id': 0
-
-
-#                               'user_password': 0
-#                               'level_1_duration': 0,
-#                               'level_1_difficulty': 0,
-#                               .
-#                               .
-#                               .
-#                               'level_x_duration' : 0,
-#                               'level_x_difficulty' : 0
-#                            }}
 
 
 def receive(message):
-    # message = { plate_id: 0,
-    #            user_id: 0,
-    #            user_password: 0,    }
-    global clients, database
-    message = json.loads(message)
-    user_info = database.get_user(message['user_id']).get_dict()
-    print(user_info)
-    # clients[message['plate_id']] = 
+    print()
 
 
 def respond(message):
-    # return clients[message['plate_id']]
     return ''
 
 
@@ -43,7 +18,6 @@ def on_press():
 
 
 def main():
-    global database
     # setup screen
     screen = tk.Tk()
     screen.title('chiro plate')
@@ -51,10 +25,13 @@ def main():
     button.pack()
 
     # setup server
-    server = Server('localhost', 12345)
+    server = Server('192.168.56.1', 8000)
     server_thread = threading.Thread(target=server.start_server,
                                      args=(receive, respond))
 
     # execution
     server_thread.start()
     screen.mainloop()
+
+if __name__=="__main__":
+    main()

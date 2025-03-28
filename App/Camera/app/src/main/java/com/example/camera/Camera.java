@@ -1,8 +1,6 @@
 package com.example.camera;
 
-import android.content.Context;
 import android.util.Log;
-import android.view.SurfaceView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
@@ -28,13 +26,13 @@ public class Camera {
     private Preview _cameraPreview;
     private final ExecutorService _cameraExecutor;
     private ImageAnalysis _frameReader;
-    private Consumer<ImageProxy> _onFrameReceive;
+    private Consumer<ImageProxy> _frameHandler;
 
-    public Camera(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> onFrameReceive){
+    public Camera(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> frameHandler){
         _activity = activity;
         _previewView = previewView;
         _cameraExecutor = Executors.newSingleThreadExecutor();
-        _onFrameReceive = onFrameReceive;
+        _frameHandler = frameHandler;
     }
 
     public Camera(AppCompatActivity activity, PreviewView previewView){
@@ -55,15 +53,15 @@ public class Camera {
                         .build();
                 _frameReader.setAnalyzer(ContextCompat.getMainExecutor(_activity), this::onFrameReceive);
                 androidx.camera.core.Camera camera = _cameraProvider.bindToLifecycle(
-                        _activity, cameraSelector, new SurfaceView(_activity), _frameReader);
+                        _activity, cameraSelector, _cameraPreview, _frameReader);
             } catch (InterruptedException | ExecutionException e) {
                 Log.e("Camera", "Use case binding failed", e);
             }
         }, ContextCompat.getMainExecutor(_activity));
     }
 
-    public void setFrameReceiver(Consumer<ImageProxy> onFrameReceive){
-        _onFrameReceive = onFrameReceive;
+    public void setFrameHandler(Consumer<ImageProxy> onFrameReceive){
+        _frameHandler = onFrameReceive;
     }
 
     public void stopCamera(){
@@ -71,8 +69,8 @@ public class Camera {
     }
 
     private void onFrameReceive(ImageProxy image){
-        if(_onFrameReceive != null)
-            _onFrameReceive.accept(image); //calling the consumer here to ensure that image.close() is called after use.
+        if(_frameHandler != null)
+            _frameHandler.accept(image); //calling the consumer here to ensure that image.close() is called after use.
         image.close();
     }
 }
