@@ -1,31 +1,42 @@
 import socket
 import threading
 
-import socket
-
 
 class Server:
+
     def __init__(self, server_host, server_port):
         self.server_host = server_host
         self.server_port = server_port
 
-    def start_server(self, receive_command, response_command):
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Use UDP
-        server_socket.bind((self.server_host, self.server_port))
-
-        print(f'UDP Server is listening on {self.server_host}:{self.server_port}...')
+    def handle_client(self, client_socket, client_address, receive_command, response_command):
+        print(f'Connection established with {client_address} from {self.server_host}')
 
         while True:
-            # Receive data from a client
-            message, client_address = server_socket.recvfrom(1024)
-            message = message.decode()
+            # Receive data from the client
+            message = client_socket.recv(1000000)
 
             if not message:
-                continue  # Ignore empty messages
-
-            print(f'Received message from {client_address}: {message}')
+                break
             receive_command(message)
 
             # Send a response back to the client
             response = response_command(message)
-            server_socket.sendto(response.encode(), client_address)
+            client_socket.send(response)
+
+        # Close the client socket
+        client_socket.close()
+        print(f'Connection closed with {client_address}')
+
+    def start_server(self, receive_command, response_command):
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((self.server_host, self.server_port))
+        server_socket.listen(5)
+
+        print(f'Server is listening on {self.server_host}:{self.server_port}...')
+
+        while True:
+            client_socket, client_address = server_socket.accept()
+            client_thread = threading.Thread(target=self.handle_client,
+                                             args=(client_socket, client_address, receive_command, response_command))
+            client_thread.start()
+            print(f'Device connections: {threading.active_count() - 2}')

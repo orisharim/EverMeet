@@ -8,7 +8,7 @@ def receive(message):
 
 
 def respond(message):
-    return ''
+    return message
 
 
 def on_press():
@@ -25,7 +25,7 @@ def main():
     button.pack()
 
     # setup server
-    server = Server('192.168.56.1', 8000)
+    server = Server('10.0.0.32', 12345)
     server_thread = threading.Thread(target=server.start_server,
                                      args=(receive, respond))
 

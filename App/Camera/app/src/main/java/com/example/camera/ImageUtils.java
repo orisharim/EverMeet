@@ -1,6 +1,9 @@
 package com.example.camera;
 
 
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.media.Image;
 import androidx.annotation.OptIn;
 import androidx.camera.core.ExperimentalGetImage;
@@ -8,50 +11,46 @@ import androidx.camera.core.ImageProxy;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteBuffer;
 
 public class ImageUtils {
 
-    /**
-     * Converts an ImageProxy (YUV_420_888) to a byte array.
-     *
-     * @param imageProxy The ImageProxy to convert.
-     * @return A byte array containing the raw YUV image data.
-     */
-    @OptIn(markerClass = ExperimentalGetImage.class)
-    public static byte[] imageProxyToByteArray(ImageProxy imageProxy) {
-        Image image = imageProxy.getImage();
-        if (image == null) return null;
+    public static Bitmap imageToBitmap(Image image) {
+        Image.Plane[] planes = image.getPlanes();
+        ByteBuffer yBuffer = planes[0].getBuffer();
+        ByteBuffer uBuffer = planes[1].getBuffer();
+        ByteBuffer vBuffer = planes[2].getBuffer();
 
-        int totalSize = 0;
-        for (Image.Plane plane : image.getPlanes()) {
-            totalSize += plane.getBuffer().remaining();
-        }
+        int ySize = yBuffer.remaining();
+        int uSize = uBuffer.remaining();
+        int vSize = vBuffer.remaining();
 
-        byte[] imageBytes = new byte[totalSize];
-        int offset = 0;
+        byte[] nv21 = new byte[ySize + uSize + vSize];
+        //U and V are swapped
+        yBuffer.get(nv21, 0, ySize);
+        vBuffer.get(nv21, ySize, vSize);
+        uBuffer.get(nv21, ySize + vSize, uSize);
 
-        for (Image.Plane plane : image.getPlanes()) {
-            ByteBuffer buffer = plane.getBuffer();
-            int size = buffer.remaining();
-            buffer.get(imageBytes, offset, size);
-            offset += size;
-        }
+        YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, image.getWidth(), image.getHeight(), null);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        yuvImage.compressToJpeg(new Rect(0, 0, yuvImage.getWidth(), yuvImage.getHeight()), 75, out);
 
-        return imageBytes;
+        byte[] imageBytes = out.toByteArray();
+        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
     }
 
-    /**
-     * Converts a byte array to a Bitmap.
-     *
-     * @param imageData The byte array representing the image.
-     * @return The Bitmap created from the byte array.
-     */
-    public static Bitmap byteArrayToBitmap(byte[] imageData) {
-        if (imageData == null || imageData.length == 0) return null;
 
-        return BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
+
+    public static Bitmap byteArrayToBitmap(byte[] bytes) {
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+    }
+
+    public static byte[] bitmapToByteArray(Bitmap bitmap) {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream); // Change format if needed
+        return stream.toByteArray();
     }
 
 }
