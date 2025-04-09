@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true">
+
+    <!-- Login Layout -->
+    <LinearLayout
+        android:id="@+id/loginLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:background="#FFFFFF">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Video Conference"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp" />
+
+        <EditText
+            android:id="@+id/usernameInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter your username"
+            android:inputType="text"
+            android:padding="12dp"
+            android:layout_marginVertical="8dp" />
+
+        <Button
+            android:id="@+id/loginButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Login"
+            android:padding="12dp"
+            android:layout_marginTop="16dp" />
+    </LinearLayout>
+
+    <!-- Room List Layout -->
+    <LinearLayout
+        android:id="@+id/roomListLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone"
+        android:background="#FFFFFF">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Available Rooms"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/createRoomButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Create Room" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/roomsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+
+    <!-- Call Layout -->
+    <FrameLayout
+        android:id="@+id/callLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <!-- This will contain the grid of participants -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/participantsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp" />
+
+        <!-- Local view (small overlay) -->
+<!--        <org.webrtc.SurfaceViewRenderer-->
+<!--            android:id="@+id/localView"-->
+<!--            android:layout_width="120dp"-->
+<!--            android:layout_height="150dp"-->
+<!--            android:layout_gravity="bottom|end"-->
+<!--            android:layout_margin="16dp"-->
+<!--            android:elevation="10dp" />-->
+    </FrameLayout>
+
+    <!-- Call Control Layout -->
+    <LinearLayout
+        android:id="@+id/callControlLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="#80000000"
+        android:visibility="gone"
+        android:layout_gravity="bottom">
+
+        <ImageView
+            android:id="@+id/micButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/baseline_mic_off_24"
+            android:background="@drawable/baseline_circle_24"
+            android:backgroundTint="#424242"
+            android:padding="12dp"
+            android:layout_margin="8dp" />
+
+        <ImageView
+            android:id="@+id/videoButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/baseline_videocam_off_24"
+            android:background="@drawable/baseline_circle_24"
+            android:backgroundTint="#424242"
+            android:padding="12dp"
+            android:layout_margin="8dp" />
+
+        <ImageView
+            android:id="@+id/endCallButton"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/baseline_call_end_24"
+            android:background="@drawable/baseline_circle_24"
+            android:backgroundTint="#F44336"
+            android:padding="16dp"
+            android:layout_margin="8dp" />
+
+        <ImageView
+            android:id="@+id/switchCameraButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/baseline_cameraswitch_24"
+            android:background="@drawable/baseline_circle_24"
+            android:backgroundTint="#424242"
+            android:padding="12dp"
+            android:layout_margin="8dp" />
+    </LinearLayout>
+
+</FrameLayout>
+
+

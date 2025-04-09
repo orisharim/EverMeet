@@ -13,14 +13,15 @@ class Server:
 
         while True:
             # Receive data from the client
-            message = client_socket.recv(1024).decode()
+            message = client_socket.recv(1000000)
+
             if not message:
                 break
             receive_command(message)
 
             # Send a response back to the client
-            response = response_command()
-            client_socket.send(response.encode())
+            response = response_command(message)
+            client_socket.send(response)
 
         # Close the client socket
         client_socket.close()
@@ -38,4 +39,4 @@ class Server:
             client_thread = threading.Thread(target=self.handle_client,
                                              args=(client_socket, client_address, receive_command, response_command))
             client_thread.start()
-            print(f'Device connections: {threading.active_count() - 1}')
+            print(f'Device connections: {threading.active_count() - 2}')
