@@ -3,14 +3,19 @@ package com.example.camapp;
 
 import android.Manifest;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -38,34 +43,41 @@ import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
     // UI elements
-    private View loginLayout, callControlLayout, incomingCallLayout, targetUserLayout;
-    private EditText usernameInput, targetUserInput;
-    private TextView incomingCallText;
-    private SurfaceViewRenderer localView, remoteView;
+    private View loginLayout, roomListLayout, callLayout, callControlLayout;
+    private EditText usernameInput;
+    private RecyclerView roomsRecyclerView, participantsRecyclerView;
+    private SurfaceViewRenderer localView;
     private ImageView micButton, videoButton, endCallButton, switchCameraButton;
 
+    // Adapters
+    private RoomAdapter roomAdapter;
+    private ParticipantAdapter participantAdapter;
+
     // WebRTC components
-    private EglBase.Context eglBaseContext;
+    private EglBase eglBase;
     private PeerConnectionFactory peerConnectionFactory;
     private VideoTrack localVideoTrack;
     private AudioTrack localAudioTrack;
-    private PeerConnection peerConnection;
     private VideoSource videoSource;
     private AudioSource audioSource;
     private CameraVideoCapturer videoCapturer;
     private MediaStream localStream;
 
+    // Connection management
+    private Map<String, Peer> peers = new HashMap<>();
+
     // Firebase
     private DatabaseReference dbRef;
     private String username;
-    private String target;
+    private Room currentRoom;
     private final Gson gson = new Gson();
-    private static final String LATEST_EVENT = "latest_event";
 
     // State flags
     private boolean isMicMuted = false;
@@ -82,6 +94,9 @@ public class MainActivity extends AppCompatActivity {
         // Initialize UI elements
         initViews();
 
+        // Set up adapters
+        setupAdapters();
+
         // Initialize WebRTC components
         initWebRTC();
 
@@ -91,16 +106,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void initViews() {
         loginLayout = findViewById(R.id.loginLayout);
+        roomListLayout = findViewById(R.id.roomListLayout);
+        callLayout = findViewById(R.id.callLayout);
         callControlLayout = findViewById(R.id.callControlLayout);
-        incomingCallLayout = findViewById(R.id.incomingCallLayout);
-        targetUserLayout = findViewById(R.id.targetUserLayout);
 
         usernameInput = findViewById(R.id.usernameInput);
-        targetUserInput = findViewById(R.id.targetUserInput);
-        incomingCallText = findViewById(R.id.incomingCallText);
+//        roomNameInput = findViewById(R.id.roomNameInput);
+
+        roomsRecyclerView = findViewById(R.id.roomsRecyclerView);
+        participantsRecyclerView = findViewById(R.id.participantsRecyclerView);
 
         localView = findViewById(R.id.localView);
-        remoteView = findViewById(R.id.remoteView);
 
         micButton = findViewById(R.id.micButton);
         videoButton = findViewById(R.id.videoButton);
@@ -109,24 +125,32 @@ public class MainActivity extends AppCompatActivity {
 
         // Initially only show login layout
         loginLayout.setVisibility(View.VISIBLE);
+        roomListLayout.setVisibility(View.GONE);
+        callLayout.setVisibility(View.GONE);
         callControlLayout.setVisibility(View.GONE);
-        incomingCallLayout.setVisibility(View.GONE);
-        targetUserLayout.setVisibility(View.GONE);
+    }
+
+    private void setupAdapters() {
+        // Set up room adapter
+        roomAdapter = new RoomAdapter();
+        roomsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        roomsRecyclerView.setAdapter(roomAdapter);
+
+        // Set up participant adapter
+        participantAdapter = new ParticipantAdapter();
+        participantsRecyclerView.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        participantsRecyclerView.setAdapter(participantAdapter);
     }
 
     private void initWebRTC() {
         // Create EGL context
-        EglBase eglBase = EglBase.create();
-        eglBaseContext = eglBase.getEglBaseContext();
+        eglBase = EglBase.create();
 
-        // Initialize surface renderers
-        localView.init(eglBaseContext, null);
+        // Initialize local view
+        localView.init(eglBase.getEglBaseContext(), null);
         localView.setEnableHardwareScaler(true);
         localView.setMirror(true);
-
-        remoteView.init(eglBaseContext, null);
-        remoteView.setEnableHardwareScaler(true);
-        remoteView.setMirror(false);
 
         // Initialize PeerConnectionFactory
         PeerConnectionFactory.InitializationOptions options =
@@ -141,8 +165,8 @@ public class MainActivity extends AppCompatActivity {
         factoryOptions.disableEncryption = false;
 
         peerConnectionFactory = PeerConnectionFactory.builder()
-                .setVideoEncoderFactory(new DefaultVideoEncoderFactory(eglBaseContext, true, true))
-                .setVideoDecoderFactory(new DefaultVideoDecoderFactory(eglBaseContext))
+                .setVideoEncoderFactory(new DefaultVideoEncoderFactory(eglBase.getEglBaseContext(), true, true))
+                .setVideoDecoderFactory(new DefaultVideoDecoderFactory(eglBase.getEglBaseContext()))
                 .setOptions(factoryOptions)
                 .createPeerConnectionFactory();
     }
@@ -158,31 +182,14 @@ public class MainActivity extends AppCompatActivity {
             requestPermissionsAndLogin();
         });
 
-        // Call button click
-        findViewById(R.id.callButton).setOnClickListener(v -> {
-            String targetUser = targetUserInput.getText().toString().trim();
-            if (targetUser.isEmpty()) {
-                Toast.makeText(this, "Please enter target username", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            sendCallRequest(targetUser);
-        });
-
-        // Accept call button click
-        findViewById(R.id.acceptButton).setOnClickListener(v -> {
-            startCall();
-            incomingCallLayout.setVisibility(View.GONE);
-        });
-
-        // Reject call button click
-        findViewById(R.id.rejectButton).setOnClickListener(v -> {
-            incomingCallLayout.setVisibility(View.GONE);
+        // Create room button click
+        findViewById(R.id.createRoomButton).setOnClickListener(v -> {
+            showCreateRoomDialog();
         });
 
         // End call button click
         endCallButton.setOnClickListener(v -> {
-            endCall();
+            leaveRoom();
         });
 
         // Mute mic button click
@@ -222,17 +229,21 @@ public class MainActivity extends AppCompatActivity {
     private void login() {
         username = usernameInput.getText().toString().trim();
 
-        dbRef.child(username).setValue("").addOnCompleteListener(task -> {
+        // Save user to database
+        dbRef.child("users").child(username).setValue(true).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                // Show call interface
+                // Show room list interface
                 loginLayout.setVisibility(View.GONE);
-                targetUserLayout.setVisibility(View.VISIBLE);
+                roomListLayout.setVisibility(View.VISIBLE);
 
                 // Start local stream
                 initLocalStream();
 
-                // Listen for incoming calls
-                listenForCalls();
+                // Load room list
+                loadRoomList();
+
+                // Listen for signaling messages
+                listenForSignalingMessages();
             } else {
                 Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show();
             }
@@ -247,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Create thread for capturer
         SurfaceTextureHelper surfaceTextureHelper = SurfaceTextureHelper.create(
-                "CaptureThread", eglBaseContext);
+                "CaptureThread", eglBase.getEglBaseContext());
 
         // Initialize capturer
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.getCapturerObserver());
@@ -285,123 +296,225 @@ public class MainActivity extends AppCompatActivity {
         throw new RuntimeException("No camera available");
     }
 
-    private void createPeerConnection() {
-        // Configure ICE servers (STUN/TURN)
-        List<PeerConnection.IceServer> iceServers = new ArrayList<>();
-        iceServers.add(PeerConnection.IceServer.builder("turn:a.relay.metered.ca:443?transport=tcp")
-                .setUsername("83eebabf8b4cce9d5dbcb649")
-                .setPassword("2D7JvfkOQtBdYW3R")
-                .createIceServer());
-
-        // Create peer connection
-        peerConnection = peerConnectionFactory.createPeerConnection(
-                iceServers,
-                new PeerConnection.Observer() {
-                    @Override
-                    public void onIceCandidate(IceCandidate iceCandidate) {
-                        sendIceCandidate(iceCandidate);
-                    }
-
-                    @Override
-                    public void onAddStream(MediaStream mediaStream) {
-                        runOnUiThread(() -> {
-                            if (mediaStream.videoTracks.size() > 0) {
-                                mediaStream.videoTracks.get(0).addSink(remoteView);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onConnectionChange(PeerConnection.PeerConnectionState newState) {
-                        runOnUiThread(() -> {
-                            if (newState == PeerConnection.PeerConnectionState.CONNECTED) {
-                                // Call connected
-                                targetUserLayout.setVisibility(View.GONE);
-                                callControlLayout.setVisibility(View.VISIBLE);
-                            } else if (newState == PeerConnection.PeerConnectionState.DISCONNECTED ||
-                                    newState == PeerConnection.PeerConnectionState.CLOSED) {
-                                // Call ended
-                                resetToTargetUserView();
-                            }
-                        });
-                    }
-
-                    // Empty implementations for required methods
-                    @Override public void onSignalingChange(PeerConnection.SignalingState signalingState) {}
-                    @Override public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {}
-                    @Override public void onIceConnectionReceivingChange(boolean b) {}
-                    @Override public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {}
-                    @Override public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {}
-                    @Override public void onRemoveStream(MediaStream mediaStream) {}
-                    @Override public void onDataChannel(org.webrtc.DataChannel dataChannel) {}
-                    @Override public void onRenegotiationNeeded() {}
-                    @Override public void onAddTrack(org.webrtc.RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {}
-                });
-
-        // Add local stream to connection
-        peerConnection.addStream(localStream);
-    }
-
-    private void listenForCalls() {
-        dbRef.child(username).child(LATEST_EVENT).addValueEventListener(new ValueEventListener() {
+    private void loadRoomList() {
+        dbRef.child("rooms").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    try {
-                        String data = snapshot.getValue().toString();
-                        SignalingData signalingData = gson.fromJson(data, SignalingData.class);
-
-                        if (signalingData != null) {
-                            handleSignalingData(signalingData);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                List<Room> rooms = new ArrayList<>();
+                for (DataSnapshot roomSnapshot : snapshot.getChildren()) {
+                    Room room = roomSnapshot.getValue(Room.class);
+                    if (room != null) {
+                        room.setId(roomSnapshot.getKey());
+                        rooms.add(room);
                     }
                 }
+                roomAdapter.setRooms(rooms);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(MainActivity.this, "Database error", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Failed to load rooms", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void handleSignalingData(SignalingData data) {
-        switch (data.type) {
-            case "START_CALL":
-                target = data.sender;
-                runOnUiThread(() -> {
-                    incomingCallText.setText(data.sender + " is calling you");
-                    incomingCallLayout.setVisibility(View.VISIBLE);
+    private void showCreateRoomDialog() {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_create_room, null);
+        EditText roomNameInput = dialogView.findViewById(R.id.roomNameInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Create Room")
+                .setView(dialogView)
+                .setPositiveButton("Create", (dialog, which) -> {
+                    String roomName = roomNameInput.getText().toString().trim();
+                    if (!roomName.isEmpty()) {
+                        createRoom(roomName);
+                    } else {
+                        Toast.makeText(this, "Room name cannot be empty", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void createRoom(String roomName) {
+        // Create a new room
+        String roomId = dbRef.child("rooms").push().getKey();
+        if (roomId == null) {
+            Toast.makeText(this, "Failed to create room", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Room room = new Room(roomId, roomName, username);
+        room.getParticipants().put(username, true);
+
+        dbRef.child("rooms").child(roomId).setValue(room)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        joinRoom(room);
+                    } else {
+                        Toast.makeText(this, "Failed to create room", Toast.LENGTH_SHORT).show();
+                    }
                 });
-                break;
+    }
 
-            case "OFFER":
-                target = data.sender;
-                if (peerConnection == null) {
-                    createPeerConnection();
+    private void joinRoom(Room room) {
+        currentRoom = room;
+
+        // Update room participants
+        if (!room.getParticipants().containsKey(username)) {
+            dbRef.child("rooms").child(room.getId()).child("participants").child(username).setValue(true);
+        }
+
+        // Show call interface
+        roomListLayout.setVisibility(View.GONE);
+        callLayout.setVisibility(View.VISIBLE);
+        callControlLayout.setVisibility(View.VISIBLE);
+
+        // Listen for participant updates
+        listenForParticipants();
+
+        // Connect to existing participants (except self)
+        for (String participantId : room.getParticipants().keySet()) {
+            if (!participantId.equals(username)) {
+                connectToParticipant(participantId);
+            }
+        }
+    }
+
+    private void listenForParticipants() {
+        dbRef.child("rooms").child(currentRoom.getId()).child("participants")
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        List<String> participants = new ArrayList<>();
+                        for (DataSnapshot participantSnapshot : snapshot.getChildren()) {
+                            String participantId = participantSnapshot.getKey();
+                            if (participantId != null) {
+                                participants.add(participantId);
+
+                                // Connect to new participants that we're not connected to yet
+                                if (!participantId.equals(username) && !peers.containsKey(participantId)) {
+                                    connectToParticipant(participantId);
+                                }
+                            }
+                        }
+
+                        // Remove peers that left the room
+                        List<String> peersToRemove = new ArrayList<>();
+                        for (String peerId : peers.keySet()) {
+                            if (!participants.contains(peerId)) {
+                                peersToRemove.add(peerId);
+                            }
+                        }
+
+                        for (String peerId : peersToRemove) {
+                            Peer peer = peers.get(peerId);
+                            if (peer != null) {
+                                peer.close();
+                                peers.remove(peerId);
+                                participantAdapter.removeParticipant(peerId);
+                            }
+                        }
+
+                        // Update participant list in UI
+                        participantAdapter.setParticipants(participants);
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Toast.makeText(MainActivity.this, "Failed to load participants", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void connectToParticipant(String participantId) {
+        if (peers.containsKey(participantId)) {
+            return;
+        }
+
+        // Create a new peer connection
+        Peer peer = new Peer(participantId);
+        peers.put(participantId, peer);
+
+        // Create offer if we're the one initiating the connection
+        // (we use alphabetical order to determine who initiates)
+        if (username.compareTo(participantId) < 0) {
+            peer.createOffer();
+        }
+    }
+
+    private void listenForSignalingMessages() {
+        dbRef.child("users").child(username).child("messages")
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        for (DataSnapshot messageSnapshot : snapshot.getChildren()) {
+                            try {
+                                String data = messageSnapshot.getValue(String.class);
+                                if (data != null) {
+                                    SignalingData signalingData = gson.fromJson(data, SignalingData.class);
+                                    handleSignalingData(signalingData);
+                                }
+
+                                // Remove the message after processing
+                                messageSnapshot.getRef().removeValue();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Toast.makeText(MainActivity.this, "Failed to load messages", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void handleSignalingData(SignalingData data) {
+        // Handle room invitation
+        if ("ROOM_INVITE".equals(data.type)) {
+            String roomId = data.data;
+            dbRef.child("rooms").child(roomId).get().addOnSuccessListener(snapshot -> {
+                Room room = snapshot.getValue(Room.class);
+                if (room != null) {
+                    room.setId(snapshot.getKey());
+                    // Ask user if they want to join
+                    showRoomInviteDialog(room);
                 }
+            });
+            return;
+        }
 
+        // All other messages are WebRTC signaling
+        String senderId = data.sender;
+
+        // Get or create the peer
+        Peer peer = peers.get(senderId);
+        if (peer == null) {
+            peer = new Peer(senderId);
+            peers.put(senderId, peer);
+        }
+
+        switch (data.type) {
+            case "OFFER":
                 SessionDescription offer = new SessionDescription(
                         SessionDescription.Type.OFFER, data.data);
-
-                peerConnection.setRemoteDescription(new SimpleSdpObserver(), offer);
-                createAnswer();
+                peer.setRemoteDescription(offer);
+                peer.createAnswer();
                 break;
 
             case "ANSWER":
                 SessionDescription answer = new SessionDescription(
                         SessionDescription.Type.ANSWER, data.data);
-                peerConnection.setRemoteDescription(new SimpleSdpObserver(), answer);
+                peer.setRemoteDescription(answer);
                 break;
 
             case "ICE_CANDIDATE":
                 try {
                     IceCandidate candidate = gson.fromJson(data.data, IceCandidate.class);
-                    if (peerConnection != null) {
-                        peerConnection.addIceCandidate(candidate);
-                    }
+                    peer.addIceCandidate(candidate);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -409,124 +522,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void sendCallRequest(String targetUser) {
-        target = targetUser;
+    private void showRoomInviteDialog(Room room) {
+        new AlertDialog.Builder(this)
+                .setTitle("Room Invitation")
+                .setMessage(room.getCreator() + " invites you to join " + room.getName())
+                .setPositiveButton("Join", (dialog, which) -> joinRoom(room))
+                .setNegativeButton("Decline", null)
+                .show();
+    }
 
-        // Check if target user exists
-        dbRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.child(targetUser).exists()) {
-                    // Create peer connection
-                    createPeerConnection();
+    private void leaveRoom() {
+        if (currentRoom != null) {
+            // Remove user from room participants
+            dbRef.child("rooms").child(currentRoom.getId()).child("participants").child(username).removeValue();
 
-                    // Send call request
-                    SignalingData callRequest = new SignalingData();
-                    callRequest.type = "START_CALL";
-                    callRequest.sender = username;
-                    callRequest.target = targetUser;
-
-                    dbRef.child(targetUser).child(LATEST_EVENT)
-                            .setValue(gson.toJson(callRequest));
-
-                    // Start the call (create offer)
-                    createOffer();
-                } else {
-                    Toast.makeText(MainActivity.this,
-                            "User not found", Toast.LENGTH_SHORT).show();
-                }
+            // Close all peer connections
+            for (Peer peer : peers.values()) {
+                peer.close();
             }
+            peers.clear();
+            participantAdapter.clearParticipants();
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(MainActivity.this,
-                        "Failed to check user", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
+            // Go back to room list
+            callLayout.setVisibility(View.GONE);
+            callControlLayout.setVisibility(View.GONE);
+            roomListLayout.setVisibility(View.VISIBLE);
 
-    private void startCall() {
-        // Create peer connection
-        createPeerConnection();
+            // Check if room is empty and remove if needed
+            checkIfRoomEmpty();
 
-        // Create answer (handled when offer is received)
-    }
-
-    private void createOffer() {
-        MediaConstraints constraints = new MediaConstraints();
-        constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
-        constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
-
-        peerConnection.createOffer(new SimpleSdpObserver() {
-            @Override
-            public void onCreateSuccess(SessionDescription sessionDescription) {
-                peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
-
-                // Send offer to remote peer
-                SignalingData offerData = new SignalingData();
-                offerData.type = "OFFER";
-                offerData.sender = username;
-                offerData.target = target;
-                offerData.data = sessionDescription.description;
-
-                dbRef.child(target).child(LATEST_EVENT).setValue(gson.toJson(offerData));
-            }
-        }, constraints);
-    }
-
-    private void createAnswer() {
-        MediaConstraints constraints = new MediaConstraints();
-        constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
-        constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
-
-        peerConnection.createAnswer(new SimpleSdpObserver() {
-            @Override
-            public void onCreateSuccess(SessionDescription sessionDescription) {
-                peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
-
-                // Send answer to remote peer
-                SignalingData answerData = new SignalingData();
-                answerData.type = "ANSWER";
-                answerData.sender = username;
-                answerData.target = target;
-                answerData.data = sessionDescription.description;
-
-                dbRef.child(target).child(LATEST_EVENT).setValue(gson.toJson(answerData));
-
-                runOnUiThread(() -> {
-                    targetUserLayout.setVisibility(View.GONE);
-                    callControlLayout.setVisibility(View.VISIBLE);
-                });
-            }
-        }, constraints);
-    }
-
-    private void sendIceCandidate(IceCandidate iceCandidate) {
-        SignalingData candidateData = new SignalingData();
-        candidateData.type = "ICE_CANDIDATE";
-        candidateData.sender = username;
-        candidateData.target = target;
-        candidateData.data = gson.toJson(iceCandidate);
-
-        dbRef.child(target).child(LATEST_EVENT).setValue(gson.toJson(candidateData));
-    }
-
-    private void endCall() {
-        if (peerConnection != null) {
-            peerConnection.close();
-            peerConnection = null;
+            currentRoom = null;
         }
-
-        resetToTargetUserView();
     }
 
-    private void resetToTargetUserView() {
-        callControlLayout.setVisibility(View.GONE);
-        targetUserLayout.setVisibility(View.VISIBLE);
+    private void checkIfRoomEmpty() {
+        dbRef.child("rooms").child(currentRoom.getId()).child("participants")
+                .get().addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists() || snapshot.getChildrenCount() == 0) {
+                        // Room is empty, remove it
+                        dbRef.child("rooms").child(currentRoom.getId()).removeValue();
+                    }
+                });
     }
 
     @Override
     protected void onDestroy() {
+        if (currentRoom != null) {
+            leaveRoom();
+        }
+
         if (videoCapturer != null) {
             try {
                 videoCapturer.stopCapture();
@@ -536,19 +580,282 @@ public class MainActivity extends AppCompatActivity {
             videoCapturer.dispose();
         }
 
-        if (peerConnection != null) {
-            peerConnection.close();
-        }
-
         if (localView != null) {
             localView.release();
         }
 
-        if (remoteView != null) {
-            remoteView.release();
+        if (eglBase != null) {
+            eglBase.release();
         }
 
         super.onDestroy();
+    }
+
+    // Room adapter for displaying available rooms
+    private class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder> {
+        private List<Room> rooms = new ArrayList<>();
+
+        public void setRooms(List<Room> rooms) {
+            this.rooms = rooms;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public RoomViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_room, parent, false);
+            return new RoomViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull RoomViewHolder holder, int position) {
+            Room room = rooms.get(position);
+            holder.bind(room);
+        }
+
+        @Override
+        public int getItemCount() {
+            return rooms.size();
+        }
+
+        private class RoomViewHolder extends RecyclerView.ViewHolder {
+            private final TextView roomNameText, roomCreatorText, participantCountText;
+
+            public RoomViewHolder(@NonNull View itemView) {
+                super(itemView);
+                roomNameText = itemView.findViewById(R.id.roomNameText);
+                roomCreatorText = itemView.findViewById(R.id.roomCreatorText);
+                participantCountText = itemView.findViewById(R.id.participantCountText);
+            }
+
+            public void bind(Room room) {
+                roomNameText.setText(room.getName());
+                roomCreatorText.setText("Created by: " + room.getCreator());
+                int participantCount = room.getParticipants() != null ? room.getParticipants().size() : 0;
+                participantCountText.setText(participantCount + " participants");
+
+                itemView.setOnClickListener(v -> joinRoom(room));
+            }
+        }
+    }
+
+    // Participant adapter for displaying participants in a call
+    private class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.ParticipantViewHolder> {
+        private List<String> participants = new ArrayList<>();
+
+        public void setParticipants(List<String> participants) {
+            this.participants = new ArrayList<>(participants);
+            notifyDataSetChanged();
+        }
+
+        public void removeParticipant(String participantId) {
+            int index = participants.indexOf(participantId);
+            if (index != -1) {
+                participants.remove(index);
+                notifyItemRemoved(index);
+            }
+        }
+
+        public void clearParticipants() {
+            int size = participants.size();
+            participants.clear();
+            notifyItemRangeRemoved(0, size);
+        }
+
+        @NonNull
+        @Override
+        public ParticipantViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_participant, parent, false);
+            return new ParticipantViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ParticipantViewHolder holder, int position) {
+            String participantId = participants.get(position);
+            holder.bind(participantId);
+        }
+
+        @Override
+        public int getItemCount() {
+            return participants.size();
+        }
+
+        private class ParticipantViewHolder extends RecyclerView.ViewHolder {
+            private final TextView participantNameText;
+            private final SurfaceViewRenderer participantVideo;
+
+            public ParticipantViewHolder(@NonNull View itemView) {
+                super(itemView);
+                participantNameText = itemView.findViewById(R.id.participantNameText);
+                participantVideo = itemView.findViewById(R.id.participantVideo);
+
+                // Initialize video renderer
+                participantVideo.init(eglBase.getEglBaseContext(), null);
+                participantVideo.setEnableHardwareScaler(true);
+                participantVideo.setMirror(false);
+            }
+
+            public void bind(String participantId) {
+                participantNameText.setText(participantId);
+
+                // Set video stream if available
+                Peer peer = peers.get(participantId);
+                if (peer != null && peer.getRemoteVideoTrack() != null) {
+                    peer.getRemoteVideoTrack().addSink(participantVideo);
+                } else if (participantId.equals(username) && localVideoTrack != null) {
+                    // Show local stream for current user
+                    localVideoTrack.addSink(participantVideo);
+                }
+            }
+        }
+    }
+
+    // Peer class to manage connection with a specific peer
+    private class Peer {
+        private final String peerId;
+        private PeerConnection peerConnection;
+        private VideoTrack remoteVideoTrack;
+
+        public Peer(String peerId) {
+            this.peerId = peerId;
+            createPeerConnection();
+        }
+
+        private void createPeerConnection() {
+            // Configure ICE servers (STUN/TURN)
+            List<PeerConnection.IceServer> iceServers = new ArrayList<>();
+            iceServers.add(PeerConnection.IceServer.builder("turn:a.relay.metered.ca:443?transport=tcp")
+                    .setUsername("83eebabf8b4cce9d5dbcb649")
+                    .setPassword("2D7JvfkOQtBdYW3R")
+                    .createIceServer());
+
+            // Create peer connection
+            peerConnection = peerConnectionFactory.createPeerConnection(
+                    iceServers,
+                    new PeerConnection.Observer() {
+                        @Override
+                        public void onIceCandidate(IceCandidate iceCandidate) {
+                            sendIceCandidate(iceCandidate);
+                        }
+
+                        @Override
+                        public void onAddStream(MediaStream mediaStream) {
+                            runOnUiThread(() -> {
+                                if (mediaStream.videoTracks.size() > 0) {
+                                    remoteVideoTrack = mediaStream.videoTracks.get(0);
+
+                                    // Add to participant video if already in adapter
+                                    int index = participantAdapter.participants.indexOf(peerId);
+                                    if (index != -1) {
+                                        participantAdapter.notifyItemChanged(index);
+                                    }
+                                }
+                            });
+                        }
+
+                        // Empty implementations for required methods
+                        @Override public void onSignalingChange(PeerConnection.SignalingState signalingState) {}
+                        @Override public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {}
+                        @Override public void onIceConnectionReceivingChange(boolean b) {}
+                        @Override public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {}
+                        @Override public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {}
+                        @Override public void onRemoveStream(MediaStream mediaStream) {}
+                        @Override public void onDataChannel(org.webrtc.DataChannel dataChannel) {}
+                        @Override public void onRenegotiationNeeded() {}
+                        @Override public void onAddTrack(org.webrtc.RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {}
+                        @Override public void onConnectionChange(PeerConnection.PeerConnectionState newState) {}
+                    });
+
+            // Add local stream to connection
+            peerConnection.addStream(localStream);
+        }
+
+        public void createOffer() {
+            MediaConstraints constraints = new MediaConstraints();
+            constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
+            constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+
+            peerConnection.createOffer(new SimpleSdpObserver() {
+                @Override
+                public void onCreateSuccess(SessionDescription sessionDescription) {
+                    peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
+
+                    // Send offer to remote peer
+                    SignalingData offerData = new SignalingData();
+                    offerData.type = "OFFER";
+                    offerData.sender = username;
+                    offerData.target = peerId;
+                    offerData.data = sessionDescription.description;
+
+                    sendSignalingData(offerData);
+                }
+            }, constraints);
+        }
+
+        public void createAnswer() {
+            MediaConstraints constraints = new MediaConstraints();
+            constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
+            constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+
+            peerConnection.createAnswer(new SimpleSdpObserver() {
+                @Override
+                public void onCreateSuccess(SessionDescription sessionDescription) {
+                    peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
+
+                    // Send answer to remote peer
+                    SignalingData answerData = new SignalingData();
+                    answerData.type = "ANSWER";
+                    answerData.sender = username;
+                    answerData.target = peerId;
+                    answerData.data = sessionDescription.description;
+
+                    sendSignalingData(answerData);
+                }
+            }, constraints);
+        }
+
+        public void setRemoteDescription(SessionDescription sessionDescription) {
+            peerConnection.setRemoteDescription(new SimpleSdpObserver(), sessionDescription);
+        }
+
+        public void addIceCandidate(IceCandidate iceCandidate) {
+            if (peerConnection != null) {
+                peerConnection.addIceCandidate(iceCandidate);
+            }
+        }
+
+        private void sendIceCandidate(IceCandidate iceCandidate) {
+            SignalingData candidateData = new SignalingData();
+            candidateData.type = "ICE_CANDIDATE";
+            candidateData.sender = username;
+            candidateData.target = peerId;
+            candidateData.data = gson.toJson(iceCandidate);
+
+            sendSignalingData(candidateData);
+        }
+
+        public VideoTrack getRemoteVideoTrack() {
+            return remoteVideoTrack;
+        }
+
+        public void close() {
+            if (peerConnection != null) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            remoteVideoTrack = null;
+        }
+    }
+
+    private void sendSignalingData(SignalingData data) {
+        // Add message to recipient's message queue
+        String messageId = dbRef.child("users").child(data.target).child("messages").push().getKey();
+        if (messageId != null) {
+            dbRef.child("users").child(data.target).child("messages").child(messageId)
+                    .setValue(gson.toJson(data));
+        }
     }
 
     // Simple SDP observer with empty implementations
@@ -561,9 +868,58 @@ public class MainActivity extends AppCompatActivity {
 
     // Data model for signaling
     private static class SignalingData {
-        String type;      // START_CALL, OFFER, ANSWER, ICE_CANDIDATE
+        String type;      // OFFER, ANSWER, ICE_CANDIDATE, ROOM_INVITE
         String sender;    // Username of sender
         String target;    // Username of target
-        String data;      // SDP or ICE candidate data
+        String data;      // SDP, ICE candidate data, or room ID
+    }
+
+    // Room model
+    public static class Room {
+        private String id;
+        private String name;
+        private String creator;
+        private Map<String, Boolean> participants = new HashMap<>();
+
+        // Required empty constructor for Firebase
+        public Room() {}
+
+        public Room(String id, String name, String creator) {
+            this.id = id;
+            this.name = name;
+            this.creator = creator;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getCreator() {
+            return creator;
+        }
+
+        public void setCreator(String creator) {
+            this.creator = creator;
+        }
+
+        public Map<String, Boolean> getParticipants() {
+            return participants;
+        }
+
+        public void setParticipants(Map<String, Boolean> participants) {
+            this.participants = participants;
+        }
     }
 }
