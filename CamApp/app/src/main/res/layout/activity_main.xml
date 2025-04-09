@@ -95,13 +95,13 @@
             android:padding="8dp" />
 
         <!-- Local view (small overlay) -->
-        <org.webrtc.SurfaceViewRenderer
-            android:id="@+id/localView"
-            android:layout_width="120dp"
-            android:layout_height="150dp"
-            android:layout_gravity="bottom|end"
-            android:layout_margin="16dp"
-            android:elevation="10dp" />
+<!--        <org.webrtc.SurfaceViewRenderer-->
+<!--            android:id="@+id/localView"-->
+<!--            android:layout_width="120dp"-->
+<!--            android:layout_height="150dp"-->
+<!--            android:layout_gravity="bottom|end"-->
+<!--            android:layout_margin="16dp"-->
+<!--            android:elevation="10dp" />-->
     </FrameLayout>
 
     <!-- Call Control Layout -->

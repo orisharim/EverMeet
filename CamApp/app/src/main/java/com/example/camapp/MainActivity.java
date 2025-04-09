@@ -2,6 +2,7 @@
 package com.example.camapp;
 
 import android.Manifest;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -51,9 +52,8 @@ public class MainActivity extends AppCompatActivity {
 
     // UI elements
     private View loginLayout, roomListLayout, callLayout, callControlLayout;
-    private EditText usernameInput;
+    private EditText usernameInput, roomNameInput;
     private RecyclerView roomsRecyclerView, participantsRecyclerView;
-    private SurfaceViewRenderer localView;
     private ImageView micButton, videoButton, endCallButton, switchCameraButton;
 
     // Adapters
@@ -88,20 +88,12 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize Firebase
         dbRef = FirebaseDatabase.getInstance().getReference();
-
-        // Initialize UI elements
         initViews();
-
-        // Set up adapters
         setupAdapters();
-
-        // Initialize WebRTC components
         initWebRTC();
-
-        // Set up click listeners
         setupButtonListeners();
+        lockScreenOrientation();
     }
 
     private void initViews() {
@@ -111,13 +103,11 @@ public class MainActivity extends AppCompatActivity {
         callControlLayout = findViewById(R.id.callControlLayout);
 
         usernameInput = findViewById(R.id.usernameInput);
-//        roomNameInput = findViewById(R.id.roomNameInput);
+        roomNameInput = findViewById(R.id.roomNameInput);
 
         roomsRecyclerView = findViewById(R.id.roomsRecyclerView);
         participantsRecyclerView = findViewById(R.id.participantsRecyclerView);
-
-        localView = findViewById(R.id.localView);
-
+        
         micButton = findViewById(R.id.micButton);
         videoButton = findViewById(R.id.videoButton);
         endCallButton = findViewById(R.id.endCallButton);
@@ -146,11 +136,6 @@ public class MainActivity extends AppCompatActivity {
     private void initWebRTC() {
         // Create EGL context
         eglBase = EglBase.create();
-
-        // Initialize local view
-        localView.init(eglBase.getEglBaseContext(), null);
-        localView.setEnableHardwareScaler(true);
-        localView.setMirror(true);
 
         // Initialize PeerConnectionFactory
         PeerConnectionFactory.InitializationOptions options =
@@ -236,8 +221,7 @@ public class MainActivity extends AppCompatActivity {
                 loginLayout.setVisibility(View.GONE);
                 roomListLayout.setVisibility(View.VISIBLE);
 
-                // Start local stream
-                initLocalStream();
+
 
                 // Load room list
                 loadRoomList();
@@ -264,9 +248,9 @@ public class MainActivity extends AppCompatActivity {
         videoCapturer.initialize(surfaceTextureHelper, this, videoSource.getCapturerObserver());
         videoCapturer.startCapture(480, 360, 30);
 
+
         // Create local video track
         localVideoTrack = peerConnectionFactory.createVideoTrack("video_track", videoSource);
-        localVideoTrack.addSink(localView);
 
         // Create local audio track
         localAudioTrack = peerConnectionFactory.createAudioTrack("audio_track", audioSource);
@@ -317,6 +301,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    private void lockScreenOrientation(){
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
+
+    private void unlockScreenOrientation(){
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+
+    }
+
+
 
     private void showCreateRoomDialog() {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_create_room, null);
@@ -371,6 +366,8 @@ public class MainActivity extends AppCompatActivity {
         callLayout.setVisibility(View.VISIBLE);
         callControlLayout.setVisibility(View.VISIBLE);
 
+        initLocalStream();
+
         // Listen for participant updates
         listenForParticipants();
 
@@ -380,6 +377,9 @@ public class MainActivity extends AppCompatActivity {
                 connectToParticipant(participantId);
             }
         }
+
+        // Allow user to rotate the screen inside the call
+        unlockScreenOrientation();
     }
 
     private void listenForParticipants() {
@@ -533,8 +533,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void leaveRoom() {
         if (currentRoom != null) {
+            // Save the room ID before potentially clearing the currentRoom reference
+            String roomId = currentRoom.getId();
+
             // Remove user from room participants
-            dbRef.child("rooms").child(currentRoom.getId()).child("participants").child(username).removeValue();
+            dbRef.child("rooms").child(roomId).child("participants").child(username).removeValue();
 
             // Close all peer connections
             for (Peer peer : peers.values()) {
@@ -549,20 +552,25 @@ public class MainActivity extends AppCompatActivity {
             roomListLayout.setVisibility(View.VISIBLE);
 
             // Check if room is empty and remove if needed
-            checkIfRoomEmpty();
+            checkIfRoomEmpty(roomId);
 
+            // Now set currentRoom to null after we're done using it
             currentRoom = null;
+
+            lockScreenOrientation();
         }
     }
 
-    private void checkIfRoomEmpty() {
-        dbRef.child("rooms").child(currentRoom.getId()).child("participants")
-                .get().addOnSuccessListener(snapshot -> {
-                    if (!snapshot.exists() || snapshot.getChildrenCount() == 0) {
-                        // Room is empty, remove it
-                        dbRef.child("rooms").child(currentRoom.getId()).removeValue();
-                    }
-                });
+    private void checkIfRoomEmpty(String roomId) {
+        if (roomId != null) {
+            dbRef.child("rooms").child(roomId).child("participants")
+                    .get().addOnSuccessListener(snapshot -> {
+                        if (!snapshot.exists() || snapshot.getChildrenCount() == 0) {
+                            // Room is empty, remove it
+                            dbRef.child("rooms").child(roomId).removeValue();
+                        }
+                    });
+        }
     }
 
     @Override
@@ -578,10 +586,6 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
             videoCapturer.dispose();
-        }
-
-        if (localView != null) {
-            localView.release();
         }
 
         if (eglBase != null) {
@@ -702,10 +706,12 @@ public class MainActivity extends AppCompatActivity {
 
                 // Set video stream if available
                 Peer peer = peers.get(participantId);
+
+
                 if (peer != null && peer.getRemoteVideoTrack() != null) {
                     peer.getRemoteVideoTrack().addSink(participantVideo);
                 } else if (participantId.equals(username) && localVideoTrack != null) {
-                    // Show local stream for current user
+                     // Show local stream for current user
                     localVideoTrack.addSink(participantVideo);
                 }
             }
