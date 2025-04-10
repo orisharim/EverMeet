@@ -1,21 +1,23 @@
-package com.example.camera;
-
+package com.example.camera.activities;
 
 import android.Manifest;
-import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.ImageView;
 
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
-
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
 
-public class MainActivity extends AppCompatActivity {
+import com.example.camera.R;
+import com.example.camera.utils.Camera;
+import com.example.camera.utils.DataSender;
+import com.example.camera.utils.ImageUtils;
+import com.example.camera.utils.Permissions;
 
-    private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
+public class CallActivity extends AppCompatActivity {
+
+    private final static String[] PERMS = {android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
     private Camera _localCam;
     private DataSender _sender;
     private ImageView image;
@@ -23,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_call);
 
         _localCam = new Camera(this, findViewById(R.id.previewView), this::onLocalCamFrameReceive);
         _sender = new DataSender("10.0.0.32", 12345, bytes -> {});
@@ -53,5 +55,4 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         _localCam.stopCamera();
     }
-
 }

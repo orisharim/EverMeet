@@ -1,8 +1,7 @@
-package com.example.camera;
+package com.example.camera.utils;
 
 import android.util.Log;
-import androidx.activity.ComponentActivity;
-import androidx.annotation.OptIn;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.*;
 import androidx.camera.lifecycle.ProcessCameraProvider;

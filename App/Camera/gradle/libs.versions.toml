@@ -1,6 +1,9 @@
 [versions]
 agp = "8.5.2"
 cameraCore = "1.4.1"
+concurrentFutures = "1.2.0"
+firebaseBom = "33.12.0"
+firebaseFirestore = "25.1.3"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
@@ -15,7 +18,12 @@ androidx-camera-extensions = { module = "androidx.camera:camera-extensions", ver
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraCore" }
 androidx-camera-video = { module = "androidx.camera:camera-video", version.ref = "cameraCore" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraCore" }
+androidx-concurrent-futures = { module = "androidx.concurrent:concurrent-futures", version.ref = "concurrentFutures" }
 camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraCore" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-database = { module = "com.google.firebase:firebase-database" }
+firebase-firestore = { module = "com.google.firebase:firebase-firestore", version.ref = "firebaseFirestore" }
+google-firebase-database = { module = "com.google.firebase:firebase-database" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

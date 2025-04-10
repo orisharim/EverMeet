@@ -1,13 +1,8 @@
-package com.example.camera;
+package com.example.camera.utils;
 
-import android.util.Log;
-
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Consumer;

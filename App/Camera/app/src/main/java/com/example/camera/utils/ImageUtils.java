@@ -1,18 +1,14 @@
-package com.example.camera;
+package com.example.camera.utils;
 
 
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.media.Image;
-import androidx.annotation.OptIn;
-import androidx.camera.core.ExperimentalGetImage;
-import androidx.camera.core.ImageProxy;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
 import java.nio.ByteBuffer;
 
 public class ImageUtils {
