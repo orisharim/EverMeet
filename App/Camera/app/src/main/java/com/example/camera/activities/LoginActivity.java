@@ -15,20 +15,19 @@ import com.example.camera.utils.User;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 public class LoginActivity extends AppCompatActivity {
 
     private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
     private ActivityLoginBinding _views;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         _views = ActivityLoginBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
-
-
 
         if(!Permissions.hasPermissions(PERMS, this)){
             Permissions.requestPermissions(PERMS, 1000, this);
@@ -47,15 +46,9 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
-            DatabaseManager.getInstance().addUser(new User(username), (success) ->{
-                if(success){
-                    Intent roomPickerActivity = new Intent(this, RoomPickerActivity.class);
-                    roomPickerActivity.putExtra("USERNAME", username);
-                    startActivity(roomPickerActivity);
-                } else {
-                    Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show();
-                }
-            });
+            // Android studio forbids getting the host ip on the main thread
+            new Thread(() -> login(username)).start();
+
         });
 
 
@@ -63,6 +56,26 @@ public class LoginActivity extends AppCompatActivity {
 
     }
 
+    private void login(String username){
+        InetAddress ip;
+        try{
+            ip = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            Toast.makeText(this, "Cant get user IP", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        User newUser = new User(username, ip);
+        User.setConnectedUser(newUser);
+
+        DatabaseManager.getInstance().addUser(User.getConnectedUser(), (success) ->{
+            if(success){
+                startActivity(new Intent(this, RoomPickerActivity.class));
+            } else {
+                Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 
     @Override
     protected void onDestroy() {
