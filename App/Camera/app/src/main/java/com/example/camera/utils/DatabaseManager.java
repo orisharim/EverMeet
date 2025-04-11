@@ -39,7 +39,7 @@ public class DatabaseManager {
     }
 
     public void addUserToRoom(User user, Room room){
-        if (!room.getParticipants().containsKey(user.getUsername())) {
+        if (!room.getParticipants().contains(user)) {
             _db.child("rooms").child(room.getId()).child("participants").child(user.getUsername()).setValue(true);
         }
     }
@@ -48,14 +48,14 @@ public class DatabaseManager {
         return _db.child("rooms").push().getKey();
     }
 
-    public void addRoom(String creatorName, String roomName, Consumer<Boolean> onComplete) {
+    public void addRoom(String roomName, Consumer<Boolean> onComplete) {
         String roomId = _db.child("rooms").push().getKey();
         if (roomId == null) {
             return;
         }
 
-        Room room = new Room(roomId, roomName, creatorName);
-        room.getParticipants().put(creatorName, true);
+        Room room = new Room(roomId, roomName, User.getConnectedUser().getUsername());
+        room.getParticipants().add(User.getConnectedUser());
 
         _db.child("rooms").child(roomId).setValue(room).addOnCompleteListener(task -> {
             onComplete.accept(task.isSuccessful());

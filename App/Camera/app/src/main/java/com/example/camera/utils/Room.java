@@ -2,14 +2,17 @@ package com.example.camera.utils;
 
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class Room {
     private String id;
     private String name;
     private String creator;
-    private Map<String, Boolean> participants = new HashMap<>();
+    private List<User> participants = new ArrayList<>();
 
     // Required empty constructor for Firebase
     public Room() {}
@@ -44,15 +47,12 @@ public class Room {
         this.creator = creator;
     }
 
-    public Map<String, Boolean> getParticipants() {
+    public List<User> getParticipants() {
         return participants;
     }
 
-    public void setParticipants(Map<String, Boolean> participants) {
+    public void setParticipants(List<User> participants) {
         this.participants = participants;
     }
-
-
-
 
 }

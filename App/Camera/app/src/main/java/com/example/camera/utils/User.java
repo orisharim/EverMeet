@@ -5,12 +5,12 @@ import java.net.InetAddress;
 public class User {
     private static User _connectedUser = null;
     private String _username;
-    private InetAddress _ip;
+    private String _ip;
 
     // required for firebase
     public User(){}
 
-    public User(String username, InetAddress ip) {
+    public User(String username, String ip) {
         _username = username;
         _ip = ip;
     }
@@ -23,7 +23,7 @@ public class User {
         return _username;
     }
 
-    public InetAddress getIp(){
+    public String getIp(){
         return _ip;
     }
 
@@ -31,7 +31,7 @@ public class User {
         this._username = username;
     }
 
-    public void setIp(InetAddress ip){
+    public void setIp(String ip){
         _ip = ip;
     }
 

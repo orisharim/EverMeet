@@ -60,7 +60,7 @@ public class RoomPickerActivity extends AppCompatActivity {
     }
 
     private void createRoom(String roomName){
-        DatabaseManager.getInstance().addRoom(User.getConnectedUser().getUsername(), roomName, (success) -> { });
+        DatabaseManager.getInstance().addRoom(roomName, (success) -> { });
         moveToCallActivity();
     }
 

@@ -15,8 +15,12 @@ import com.example.camera.utils.User;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -51,19 +55,10 @@ public class LoginActivity extends AppCompatActivity {
 
         });
 
-
-
-
     }
 
     private void login(String username){
-        InetAddress ip;
-        try{
-            ip = InetAddress.getLocalHost();
-        } catch (UnknownHostException e) {
-            Toast.makeText(this, "Cant get user IP", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        String ip = getLocalIpAddress();
 
         User newUser = new User(username, ip);
         User.setConnectedUser(newUser);
@@ -75,6 +70,23 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private String getLocalIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        }
+        return null;
     }
 
     @Override
