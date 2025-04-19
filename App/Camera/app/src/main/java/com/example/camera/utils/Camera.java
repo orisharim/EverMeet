@@ -81,7 +81,7 @@ public class Camera {
             Log.e("Camera", "Error processing frame", e);
         } finally {
             image.close(); // Ensure image is closed to avoid memory leaks
-            Log.e("a", "a");
+            Log.e("connected room", Room.getConnectedRoom().toString());
         }
     }
 }

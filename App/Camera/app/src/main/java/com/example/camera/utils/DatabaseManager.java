@@ -1,6 +1,7 @@
 package com.example.camera.utils;
 
 import android.content.Intent;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,7 +23,6 @@ public class DatabaseManager {
     private static DatabaseManager _instance = new DatabaseManager();
     private DatabaseReference _db;
 
-
     private DatabaseManager(){
         _db = FirebaseDatabase.getInstance().getReference();
     }
@@ -38,25 +38,8 @@ public class DatabaseManager {
 
     }
 
-    public void addUserToRoom(User user, Room room){
-        if (!room.getParticipants().contains(user)) {
-            room.getParticipants().add(User.getConnectedUser());
-            _db.child("rooms").child(room.getId()).setValue(room);
-        }
-    }
-
-    public void removeUserFromRoom(User user, Room room){
-        if (room.getParticipants().contains(user)) {
-            room.getParticipants().remove(User.getConnectedUser());
-            if(room.getParticipants().isEmpty())
-                _db.child("rooms").child(room.getId()).removeValue();
-            else
-                _db.child("rooms").child(room.getId()).setValue(room);
-        }
-    }
-
-    private String generateRoomId(){
-        return _db.child("rooms").push().getKey();
+    public void addUser(User user){
+        addUser(user, a -> {});
     }
 
     public void addRoom(String roomName, Consumer<Boolean> onComplete) {
@@ -72,14 +55,57 @@ public class DatabaseManager {
             onComplete.accept(task.isSuccessful());
             Room.setConnectedRoom(room);
         });
+    }
 
-
+    public void addRoom(String roomName){
+        addRoom(roomName, a -> {});
     }
 
     public void addRoom(Room room, Consumer<Boolean> onComplete){
         _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
             onComplete.accept(task.isSuccessful());
         });
+    }
+
+    public void addRoom(Room room){
+        addRoom(room, a -> {});
+    }
+
+    public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete){
+        if (!room.getParticipants().contains(user)) {
+            room.getParticipants().add(User.getConnectedUser());
+            _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
+                onComplete.accept(task.isSuccessful());
+            });;
+        }
+    }
+
+    public void addUserToRoom(User user, Room room){
+        addUserToRoom(user, room, a -> {});
+    }
+
+    public void removeUserFromRoom(User user, Room room, Consumer<Boolean> onComplete){
+        if (room.getParticipants().contains(user)) {
+            room.getParticipants().remove(User.getConnectedUser());
+            if (room.getParticipants().isEmpty()) {
+                _db.child("rooms").child(room.getId()).removeValue().addOnCompleteListener(task -> {
+                    onComplete.accept(task.isSuccessful());
+                });
+            }
+            else {
+                _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
+                    onComplete.accept(task.isSuccessful());
+                });
+            }
+        }
+    }
+
+    public void removeUserFromRoom(User user, Room room){
+        removeUserFromRoom(user, room, a -> {});
+    }
+
+    private String generateRoomId(){
+        return _db.child("rooms").push().getKey();
     }
 
     public void setOnRoomsDataChangeReceive(Consumer<List<Room>> onRoomsChange){
@@ -94,12 +120,23 @@ public class DatabaseManager {
                         rooms.add(room);
                     }
                 }
+
+                if(Room.getConnectedRoom() != null){
+                    for (Room room: rooms) {
+                        if(room.getId().equals(Room.getConnectedRoom().getId())){
+                            Room.setConnectedRoom(new Room(room));
+                        }
+                    }
+                }
+
                 onRoomsChange.accept(rooms);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {}
         });
+
+
 
     }
 

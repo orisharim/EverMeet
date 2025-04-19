@@ -11,7 +11,7 @@ import androidx.camera.core.ImageProxy;
 
 import com.example.camera.R;
 import com.example.camera.utils.Camera;
-import com.example.camera.utils.DataSender;
+import com.example.camera.utils.PeerConnectionManager;
 import com.example.camera.utils.DatabaseManager;
 import com.example.camera.utils.ImageUtils;
 import com.example.camera.utils.Permissions;
@@ -22,7 +22,7 @@ public class CallActivity extends AppCompatActivity {
 
     private final static String[] PERMS = {android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
     private Camera _localCam;
-    private DataSender _sender;
+    private PeerConnectionManager _sender;
     private ImageView image;
 
     @Override
@@ -31,7 +31,7 @@ public class CallActivity extends AppCompatActivity {
         setContentView(R.layout.activity_call);
 
         _localCam = new Camera(this, findViewById(R.id.previewView), this::onLocalCamFrameReceive);
-        _sender = new DataSender("10.0.0.32", 12345, bytes -> {});
+        _sender = new PeerConnectionManager("10.0.0.32", 12345, bytes -> {});
 
         image = findViewById(R.id.imageView);;
 

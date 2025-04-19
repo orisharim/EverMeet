@@ -27,7 +27,7 @@ public class User {
         return _ip;
     }
 
-    public void setUserId(String username) {
+    public void setUsername(String username) {
         this._username = username;
     }
 

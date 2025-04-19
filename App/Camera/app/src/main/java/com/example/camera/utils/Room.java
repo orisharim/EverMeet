@@ -2,6 +2,8 @@ package com.example.camera.utils;
 
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -13,15 +15,29 @@ public class Room {
     private String id;
     private String name;
     private String creator;
-    private List<User> participants = new ArrayList<>();
+    private List<User> participants;
 
     // Required empty constructor for Firebase
-    public Room() {}
+    public Room() {
+        participants = new ArrayList<>();
+    }
 
     public Room(String id, String name, String creator) {
         this.id = id;
         this.name = name;
         this.creator = creator;
+        participants = new ArrayList<>();
+    }
+
+    public Room(String id, String name, String creator, List<User> participants) {
+        this.id = id;
+        this.name = name;
+        this.creator = creator;
+        this.participants = participants;
+    }
+
+    public Room(Room room){
+        this(room.id, room.name, room.creator, room.getParticipants());
     }
 
     public String getId() {
@@ -64,4 +80,9 @@ public class Room {
         _connectedRoom = room;
     }
 
+    @NonNull
+    @Override
+    public String toString() {
+        return "id: "+ getId() + " participants: " + participants.toString();
+    }
 }

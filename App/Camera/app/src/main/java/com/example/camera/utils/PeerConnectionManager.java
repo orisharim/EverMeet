@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
-public class DataSender {
+public class PeerConnectionManager {
 
     private volatile byte[] _data;
     private final String _serverIp;
@@ -21,7 +21,7 @@ public class DataSender {
         FRAME_DATA
     }
 
-    public DataSender(String serverIp, int serverPort, Consumer<byte[]> dataHandler){
+    public PeerConnectionManager(String serverIp, int serverPort, Consumer<byte[]> dataHandler){
         _serverIp = new String(serverIp);
         _serverPort = serverPort;
         _dataHandler = dataHandler;
