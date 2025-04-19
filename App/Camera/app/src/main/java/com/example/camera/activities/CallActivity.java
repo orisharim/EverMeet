@@ -12,8 +12,11 @@ import androidx.camera.core.ImageProxy;
 import com.example.camera.R;
 import com.example.camera.utils.Camera;
 import com.example.camera.utils.DataSender;
+import com.example.camera.utils.DatabaseManager;
 import com.example.camera.utils.ImageUtils;
 import com.example.camera.utils.Permissions;
+import com.example.camera.utils.Room;
+import com.example.camera.utils.User;
 
 public class CallActivity extends AppCompatActivity {
 
@@ -51,8 +54,9 @@ public class CallActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    public void onBackPressed() {
+        super.onBackPressed();
         _localCam.stopCamera();
+        DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom());
     }
 }

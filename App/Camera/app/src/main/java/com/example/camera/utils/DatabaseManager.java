@@ -40,16 +40,27 @@ public class DatabaseManager {
 
     public void addUserToRoom(User user, Room room){
         if (!room.getParticipants().contains(user)) {
-            _db.child("rooms").child(room.getId()).child("participants").child(user.getUsername()).setValue(true);
+            room.getParticipants().add(User.getConnectedUser());
+            _db.child("rooms").child(room.getId()).setValue(room);
         }
     }
 
-    public String generateRoomId(){
+    public void removeUserFromRoom(User user, Room room){
+        if (room.getParticipants().contains(user)) {
+            room.getParticipants().remove(User.getConnectedUser());
+            if(room.getParticipants().isEmpty())
+                _db.child("rooms").child(room.getId()).removeValue();
+            else
+                _db.child("rooms").child(room.getId()).setValue(room);
+        }
+    }
+
+    private String generateRoomId(){
         return _db.child("rooms").push().getKey();
     }
 
     public void addRoom(String roomName, Consumer<Boolean> onComplete) {
-        String roomId = _db.child("rooms").push().getKey();
+        String roomId = generateRoomId();
         if (roomId == null) {
             return;
         }
@@ -59,7 +70,10 @@ public class DatabaseManager {
 
         _db.child("rooms").child(roomId).setValue(room).addOnCompleteListener(task -> {
             onComplete.accept(task.isSuccessful());
+            Room.setConnectedRoom(room);
         });
+
+
     }
 
     public void addRoom(Room room, Consumer<Boolean> onComplete){

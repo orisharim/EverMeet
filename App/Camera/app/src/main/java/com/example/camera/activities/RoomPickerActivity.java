@@ -66,6 +66,7 @@ public class RoomPickerActivity extends AppCompatActivity {
 
     private void joinRoom(Room room){
         DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), room);
+        Room.setConnectedRoom(room);
         moveToCallActivity();
     }
 

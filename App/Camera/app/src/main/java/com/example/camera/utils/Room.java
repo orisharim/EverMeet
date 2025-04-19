@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public class Room {
+    private static Room _connectedRoom = null;
     private String id;
     private String name;
     private String creator;
@@ -53,6 +54,14 @@ public class Room {
 
     public void setParticipants(List<User> participants) {
         this.participants = participants;
+    }
+
+    public static Room getConnectedRoom() {
+        return _connectedRoom;
+    }
+
+    public static void setConnectedRoom(Room room) {
+        _connectedRoom = room;
     }
 
 }
