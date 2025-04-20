@@ -1,12 +1,9 @@
-package com.example.camera.utils;
-
-import android.content.Intent;
-import android.util.Log;
-import android.widget.Toast;
+package com.example.camera.managers;
 
 import androidx.annotation.NonNull;
 
-import com.example.camera.activities.CallActivity;
+import com.example.camera.utils.Room;
+import com.example.camera.utils.User;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;

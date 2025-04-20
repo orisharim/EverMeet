@@ -9,17 +9,14 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.camera.databinding.ActivityLoginBinding;
-import com.example.camera.utils.DatabaseManager;
-import com.example.camera.utils.Permissions;
+import com.example.camera.managers.DatabaseManager;
+import com.example.camera.utils.PermissionsUtils;
 import com.example.camera.utils.User;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 public class LoginActivity extends AppCompatActivity {
@@ -33,8 +30,8 @@ public class LoginActivity extends AppCompatActivity {
         _views = ActivityLoginBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
 
-        if(!Permissions.hasPermissions(PERMS, this)){
-            Permissions.requestPermissions(PERMS, 1000, this);
+        if(!PermissionsUtils.hasPermissions(PERMS, this)){
+            PermissionsUtils.requestPermissions(PERMS, 1000, this);
         }
 
         _views.loginButton.setOnClickListener(v -> {
@@ -45,7 +42,7 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
-            if(!Permissions.hasPermissions(PERMS, this)){
+            if(!PermissionsUtils.hasPermissions(PERMS, this)){
                 Toast.makeText(this, "Allow the app the permissions it needs", Toast.LENGTH_SHORT).show();
                 return;
             }

@@ -7,7 +7,7 @@ import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-public class Permissions {
+public class PermissionsUtils {
 
     public static void requestPermissions(String[] permissions, int requestCode, Activity activity) {
         if (!hasPermissions(permissions, activity)) {

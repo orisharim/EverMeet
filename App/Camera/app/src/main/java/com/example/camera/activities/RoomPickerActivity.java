@@ -13,12 +13,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.camera.R;
 import com.example.camera.adapters.RoomAdapter;
 import com.example.camera.databinding.ActivityRoomPickerBinding;
-import com.example.camera.utils.DatabaseManager;
+import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.Room;
 import com.example.camera.utils.User;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 public class RoomPickerActivity extends AppCompatActivity {
 

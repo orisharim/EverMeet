@@ -1,75 +1,70 @@
 package com.example.camera.utils;
 
-import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public class Room {
     private static Room _connectedRoom = null;
-    private String id;
-    private String name;
-    private String creator;
-    private List<User> participants;
+    private String _id;
+    private String _name;
+    private String _creator;
+    private List<User> _participants;
 
     // Required empty constructor for Firebase
     public Room() {
-        participants = new ArrayList<>();
+        _participants = new ArrayList<>();
     }
 
     public Room(String id, String name, String creator) {
-        this.id = id;
-        this.name = name;
-        this.creator = creator;
-        participants = new ArrayList<>();
+        this._id = id;
+        this._name = name;
+        this._creator = creator;
+        _participants = new ArrayList<>();
     }
 
     public Room(String id, String name, String creator, List<User> participants) {
-        this.id = id;
-        this.name = name;
-        this.creator = creator;
-        this.participants = participants;
+        this._id = id;
+        this._name = name;
+        this._creator = creator;
+        this._participants = participants;
     }
 
     public Room(Room room){
-        this(room.id, room.name, room.creator, room.getParticipants());
+        this(room._id, room._name, room._creator, room.getParticipants());
     }
 
     public String getId() {
-        return id;
+        return _id;
     }
 
     public void setId(String id) {
-        this.id = id;
+        this._id = id;
     }
 
     public String getName() {
-        return name;
+        return _name;
     }
 
     public void setName(String name) {
-        this.name = name;
+        this._name = name;
     }
 
     public String getCreator() {
-        return creator;
+        return _creator;
     }
 
     public void setCreator(String creator) {
-        this.creator = creator;
+        this._creator = creator;
     }
 
     public List<User> getParticipants() {
-        return participants;
+        return _participants;
     }
 
     public void setParticipants(List<User> participants) {
-        this.participants = participants;
+        this._participants = participants;
     }
 
     public static Room getConnectedRoom() {
@@ -83,6 +78,6 @@ public class Room {
     @NonNull
     @Override
     public String toString() {
-        return "id: "+ getId() + " participants: " + participants.toString();
+        return "id: "+ getId() + " participants: " + _participants.toString();
     }
 }

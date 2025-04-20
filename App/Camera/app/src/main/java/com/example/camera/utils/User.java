@@ -23,12 +23,12 @@ public class User {
         return _username;
     }
 
-    public String getIp(){
-        return _ip;
-    }
-
     public void setUsername(String username) {
         this._username = username;
+    }
+
+    public String getIp(){
+        return _ip;
     }
 
     public void setIp(String ip){

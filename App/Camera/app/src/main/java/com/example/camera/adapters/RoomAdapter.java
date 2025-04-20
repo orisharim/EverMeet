@@ -9,7 +9,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.camera.R;
-import com.example.camera.utils.DatabaseManager;
 import com.example.camera.utils.Room;
 import com.example.camera.utils.User;
 
