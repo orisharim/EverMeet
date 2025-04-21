@@ -1,31 +1,31 @@
 package com.example.camera.utils;
 
 public class DataPacket {
-    private String username;
-    private long timestamp;
-    private int sequenceNumber;
-    private byte[] payload;
+    private String _username;
+    private long _timestamp;
+    private int _sequenceNumber;
+    private byte[] _payload;
 
     public DataPacket(String username, long timestamp, int sequenceNumber, byte[] payload) {
-        this.username = username;
-        this.timestamp = timestamp;
-        this.sequenceNumber = sequenceNumber;
-        this.payload = payload;
+        this._username = username;
+        this._timestamp = timestamp;
+        this._sequenceNumber = sequenceNumber;
+        this._payload = payload;
     }
 
     public String getUsername() {
-        return username;
+        return _username;
     }
 
     public long getTimestamp() {
-        return timestamp;
+        return _timestamp;
     }
 
     public int getSequenceNumber() {
-        return sequenceNumber;
+        return _sequenceNumber;
     }
 
     public byte[] getPayload() {
-        return payload;
+        return _payload;
     }
 }

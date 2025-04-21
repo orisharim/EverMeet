@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
-public class CameraManager {
+public class Camera {
     private final AppCompatActivity _activity;
     private final PreviewView _previewView;
     private ProcessCameraProvider _cameraProvider;
@@ -24,14 +24,14 @@ public class CameraManager {
     private ImageAnalysis _frameReader;
     private Consumer<ImageProxy> _frameHandler;
 
-    public CameraManager(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> frameHandler) {
+    public Camera(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> frameHandler) {
         _activity = activity;
         _previewView = previewView;
         _cameraExecutor = Executors.newFixedThreadPool(2); // Increased threads for performance
         _frameHandler = frameHandler;
     }
 
-    public CameraManager(AppCompatActivity activity, PreviewView previewView) {
+    public Camera(AppCompatActivity activity, PreviewView previewView) {
         this(activity, previewView, null);
     }
 

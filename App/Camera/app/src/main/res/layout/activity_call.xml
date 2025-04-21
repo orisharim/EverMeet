@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".activities.CallActivity">
 
-    <!-- Bottom Button Menu -->
+<!--     Bottom Button Menu-->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="221dp"
@@ -36,7 +36,8 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@android:color/black"
-            android:src="@drawable/mic"/>
+            android:src="@drawable/muted_mic"
+            />
 
         <ImageButton
             android:id="@+id/cameraButton"
@@ -44,13 +45,15 @@
             android:layout_height="48dp"
             android:background="@android:color/black"
             android:src="@drawable/cam"/>
+
         <ImageButton
             android:layout_weight="0"
             android:id="@+id/leaveButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@android:color/black"
-            android:src="@drawable/door"/>
+            android:background="@drawable/leave_call_background"
+            android:src="@drawable/door"
+            />
 
     </LinearLayout>
 
