@@ -82,17 +82,18 @@ public class DatabaseManager {
     }
 
     public void removeUserFromRoom(User user, Room room, Consumer<Boolean> onComplete){
-        if (room.getParticipants().contains(user)) {
-            room.getParticipants().remove(User.getConnectedUser());
-            if (room.getParticipants().isEmpty()) {
-                _db.child("rooms").child(room.getId()).removeValue().addOnCompleteListener(task -> {
-                    onComplete.accept(task.isSuccessful());
-                });
-            }
-            else {
-                _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
-                    onComplete.accept(task.isSuccessful());
-                });
+        for(User participant : room.getParticipants()) {
+            if (user.getUsername().equals(participant.getUsername())) {
+                room.getParticipants().remove(participant);
+                if (room.getParticipants().isEmpty()) {
+                    _db.child("rooms").child(room.getId()).removeValue().addOnCompleteListener(task -> {
+                        onComplete.accept(task.isSuccessful());
+                    });
+                } else {
+                    _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
+                        onComplete.accept(task.isSuccessful());
+                    });
+                }
             }
         }
     }
@@ -132,10 +133,9 @@ public class DatabaseManager {
             @Override
             public void onCancelled(@NonNull DatabaseError error) {}
         });
-
-
-
     }
+
+
 
 
 

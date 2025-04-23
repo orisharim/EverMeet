@@ -1,4 +1,4 @@
-package com.example.camera.managers;
+package com.example.camera.utils;
 
 import android.util.Log;
 
@@ -8,7 +8,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 
-import com.example.camera.utils.Room;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,7 +82,6 @@ public class Camera {
             Log.e("Camera", "Error processing frame", e);
         } finally {
             image.close(); // Ensure image is closed to avoid memory leaks
-            Log.e("connected room", Room.getConnectedRoom().toString());
         }
     }
 }

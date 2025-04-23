@@ -2,7 +2,7 @@ package com.example.camera.activities;
 
 import android.Manifest;
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 
 import androidx.annotation.OptIn;
@@ -12,7 +12,8 @@ import androidx.camera.core.ImageProxy;
 
 import com.example.camera.R;
 import com.example.camera.databinding.ActivityCallBinding;
-import com.example.camera.managers.Camera;
+import com.example.camera.managers.PeerConnectionManager;
+import com.example.camera.utils.Camera;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.ImageUtils;
 import com.example.camera.utils.Room;
@@ -45,7 +46,7 @@ public class CallActivity extends AppCompatActivity {
                 _views.micButton.setImageResource(R.drawable.muted_mic);
             else
                 _views.micButton.setImageResource(R.drawable.mic);
-
+            PeerConnectionManager.getInstance().updateConnections();
         });
 
         _views.cameraButton.setOnClickListener(view -> {
@@ -58,13 +59,16 @@ public class CallActivity extends AppCompatActivity {
         });
 
         _views.leaveButton.setOnClickListener(view -> {leaveCall();});
-
+        PeerConnectionManager.getInstance().setOnCompleteDataReceived(bytes -> {
+            Bitmap frameDataBitmap = ImageUtils.byteArrayToBitmap(bytes);
+            _views.imageView.setImageBitmap(frameDataBitmap);
+        });
     }
 
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onLocalCamFrameReceive(ImageProxy frame){
         byte[] frameData = ImageUtils.bitmapToByteArray(ImageUtils.imageToBitmap(frame.getImage()));
-
+        PeerConnectionManager.getInstance().setDataSupplier(() -> {return frameData;});
     }
 
     @Override

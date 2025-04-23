@@ -4,13 +4,15 @@ public class DataPacket {
     private String _username;
     private long _timestamp;
     private int _sequenceNumber;
+    private int _totalPackets;
     private byte[] _payload;
 
-    public DataPacket(String username, long timestamp, int sequenceNumber, byte[] payload) {
-        this._username = username;
-        this._timestamp = timestamp;
-        this._sequenceNumber = sequenceNumber;
-        this._payload = payload;
+    public DataPacket(String username, long timestamp, int sequenceNumber, int totalPackets, byte[] payload) {
+        _username = username;
+        _timestamp = timestamp;
+        _sequenceNumber = sequenceNumber;
+        _totalPackets = totalPackets;
+        _payload = payload;
     }
 
     public String getUsername() {
@@ -25,7 +27,11 @@ public class DataPacket {
         return _sequenceNumber;
     }
 
+    public int getTotalPackets() { return _totalPackets; }
+
     public byte[] getPayload() {
         return _payload;
     }
+
+
 }

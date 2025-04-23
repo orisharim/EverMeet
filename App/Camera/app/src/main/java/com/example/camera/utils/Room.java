@@ -2,6 +2,8 @@ package com.example.camera.utils;
 
 import androidx.annotation.NonNull;
 
+import com.example.camera.managers.PeerConnectionManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,6 +75,7 @@ public class Room {
 
     public static void setConnectedRoom(Room room) {
         _connectedRoom = room;
+        PeerConnectionManager.getInstance().updateConnections();
     }
 
     @NonNull
