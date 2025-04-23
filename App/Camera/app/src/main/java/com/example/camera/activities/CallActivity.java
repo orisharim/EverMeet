@@ -2,6 +2,7 @@ package com.example.camera.activities;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 
@@ -15,7 +16,7 @@ import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.PeerConnectionManager;
 import com.example.camera.utils.Camera;
 import com.example.camera.managers.DatabaseManager;
-import com.example.camera.utils.ImageUtils;
+import com.example.camera.utils.ImageConversionUtils;
 import com.example.camera.utils.Room;
 import com.example.camera.utils.User;
 
@@ -34,6 +35,9 @@ public class CallActivity extends AppCompatActivity {
         _views = ActivityCallBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
 
+        // lock orientation
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
         _localCam = new Camera(this, findViewById(R.id.previewView), this::onLocalCamFrameReceive);
         _localCam.startLocalCamera();
 
@@ -46,7 +50,7 @@ public class CallActivity extends AppCompatActivity {
                 _views.micButton.setImageResource(R.drawable.muted_mic);
             else
                 _views.micButton.setImageResource(R.drawable.mic);
-            PeerConnectionManager.getInstance().updateConnections();
+            PeerConnectionManager.getInstance().connectToParticipants();
         });
 
         _views.cameraButton.setOnClickListener(view -> {
@@ -60,14 +64,14 @@ public class CallActivity extends AppCompatActivity {
 
         _views.leaveButton.setOnClickListener(view -> {leaveCall();});
         PeerConnectionManager.getInstance().setOnCompleteDataReceived(bytes -> {
-            Bitmap frameDataBitmap = ImageUtils.byteArrayToBitmap(bytes);
+            Bitmap frameDataBitmap = ImageConversionUtils.byteArrayToBitmap(bytes);
             _views.imageView.setImageBitmap(frameDataBitmap);
         });
     }
 
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onLocalCamFrameReceive(ImageProxy frame){
-        byte[] frameData = ImageUtils.bitmapToByteArray(ImageUtils.imageToBitmap(frame.getImage()));
+        byte[] frameData = ImageConversionUtils.bitmapToByteArray(ImageConversionUtils.imageToBitmap(frame.getImage()));
         PeerConnectionManager.getInstance().setDataSupplier(() -> {return frameData;});
     }
 
@@ -78,7 +82,7 @@ public class CallActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop() {
+    public void onStop() {
         super.onStop();
         leaveCall();
     }

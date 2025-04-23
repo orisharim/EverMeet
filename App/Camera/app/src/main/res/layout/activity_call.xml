@@ -7,11 +7,11 @@
     android:layout_height="match_parent"
     tools:context=".activities.CallActivity">
 
-<!--     Bottom Button Menu-->
+    <!--     Bottom Button Menu-->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
-        android:layout_width="411dp"
-        android:layout_height="325dp"
+        android:layout_width="371dp"
+        android:layout_height="355dp"
         app:layout_constraintBottom_toTopOf="@id/buttonMenu"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -19,47 +19,45 @@
         android:id="@+id/buttonMenu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="right"
-        android:padding="4dp"
         android:background="@android:color/black"
+        android:gravity="right"
+        android:orientation="horizontal"
+        android:padding="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
         <ImageButton
             android:id="@+id/micButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@android:color/black"
-            android:src="@drawable/muted_mic"
-            />
+            android:src="@drawable/muted_mic" />
 
         <ImageButton
             android:id="@+id/cameraButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@android:color/black"
-            android:src="@drawable/cam"/>
+            android:src="@drawable/cam" />
 
         <ImageButton
-            android:layout_weight="0"
             android:id="@+id/leaveButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:layout_weight="0"
             android:background="@drawable/leave_call_background"
-            android:src="@drawable/door"
-            />
+            android:src="@drawable/door" />
 
     </LinearLayout>
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="404dp"
-        android:layout_height="350dp"
-        android:layout_marginEnd="3dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_width="359dp"
+        android:layout_height="351dp"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="0dp" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

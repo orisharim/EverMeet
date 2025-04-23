@@ -50,7 +50,7 @@ public class DatabaseManager {
 
         _db.child("rooms").child(roomId).setValue(room).addOnCompleteListener(task -> {
             onComplete.accept(task.isSuccessful());
-            Room.setConnectedRoom(room);
+            Room.connectToRoom(room);
         });
     }
 
@@ -122,7 +122,7 @@ public class DatabaseManager {
                 if(Room.getConnectedRoom() != null){
                     for (Room room: rooms) {
                         if(room.getId().equals(Room.getConnectedRoom().getId())){
-                            Room.setConnectedRoom(new Room(room));
+                            Room.connectToRoom(new Room(room));
                         }
                     }
                 }

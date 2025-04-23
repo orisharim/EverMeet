@@ -2,6 +2,7 @@ package com.example.camera.activities;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
@@ -27,6 +28,9 @@ public class RoomPickerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         _views = ActivityRoomPickerBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
+
+        // lock orientation
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         _roomAdapter = new RoomAdapter(User.getConnectedUser(), this::joinRoom);
         _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -63,7 +67,7 @@ public class RoomPickerActivity extends AppCompatActivity {
 
     private void joinRoom(Room room){
         DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), room);
-        Room.setConnectedRoom(room);
+        Room.connectToRoom(room);
         moveToCallActivity();
     }
 

@@ -3,12 +3,10 @@ package com.example.camera.utils;
 public class Connection {
     private User _user;
     private Thread _sendThread;
-    private Thread _receiveThread;
 
-    public Connection(User user, Thread sendThread, Thread receiveThread) {
+    public Connection(User user, Thread sendThread) {
         this._user = user;
         this._sendThread = sendThread;
-        this._receiveThread = receiveThread;
     }
 
     public User getUser() {
@@ -26,13 +24,5 @@ public class Connection {
     public void setSendThread(Thread sendThread) {
         this._sendThread = sendThread;
     }
-
-    public Thread getReceiveThread() {
-        return _receiveThread;
-    }
-
-    public void setReceiveThread(Thread receiveThread) {
-        this._receiveThread = receiveThread;
-    }
-
 }
+

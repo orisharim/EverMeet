@@ -10,6 +10,7 @@ import com.example.camera.utils.User;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +19,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 public class PeerConnectionManager {
     private static final int PACKET_SIZE = 2000;
     private static final int PORT = 12345;
@@ -35,8 +35,11 @@ public class PeerConnectionManager {
     // Map to track incomplete frame data by FrameKey (timestamp + username)
     private HashMap<FrameKey, List<DataPacket>> incompleteFrames;
 
-    // Socket for receiving packets
+    // Single receive socket and thread for all connections
     private DatagramSocket receiveSocket;
+    private Thread receiveThread;
+    private Thread cleanupThread;
+    private boolean isRunning;
 
     private PeerConnectionManager() {
         connections = new ArrayList<>();
@@ -44,9 +47,7 @@ public class PeerConnectionManager {
         dataSupplier = () -> new byte[0];
         onCompleteDataReceived = bytes -> {};
         incompleteFrames = new HashMap<>();
-
-        // Start cleanup thread for incomplete frames
-        startCleanupThread();
+        isRunning = false;
     }
 
     // Simple class to create a composite key from timestamp and username
@@ -94,34 +95,41 @@ public class PeerConnectionManager {
         this.onCompleteDataReceived = onCompleteDataReceived;
     }
 
-    public void updateConnections() {
-        // Close existing connections
-        for (Connection connection : connections) {
-            connection.getSendThread().interrupt();
-            connection.getReceiveThread().interrupt();
-        }
+    public void connectToParticipants() {
+        // Stop existing connections and threads
+        shutdown();
+
+        // Start the single receive thread if not already running
+        startReceiveThread();
+
+        // Start the cleanup thread if not already running
+        startCleanupThread();
 
         connections = new ArrayList<>();
 
-        // Create new connections for all participants except self
+        // Create new send connections for all participants except self
         for (User user : Room.getConnectedRoom().getParticipants()) {
             if (user.getUsername().equals(User.getConnectedUser().getUsername())) {
                 continue;
             }
             connections.add(createConnection(user));
         }
+
+        isRunning = true;
     }
 
     private Connection createConnection(User user) {
-        Thread receiveThread = createReceiveThread();
         Thread sendThread = createSendThread(user);
-        receiveThread.start();
         sendThread.start();
-        return new Connection(user, sendThread, receiveThread);
+        return new Connection(user, sendThread);
     }
 
-    private Thread createReceiveThread() {
-        return new Thread(() -> {
+    private void startReceiveThread() {
+        if (receiveThread != null && receiveThread.isAlive()) {
+            return; // Thread is already running
+        }
+
+        receiveThread = new Thread(() -> {
             try {
                 // Create a socket for receiving data
                 receiveSocket = new DatagramSocket(PORT);
@@ -141,7 +149,7 @@ public class PeerConnectionManager {
                     } catch (Exception e) {
                         if (!Thread.currentThread().isInterrupted()) {
                             Log.w(PeerConnectionManager.class.getName(), "Error receiving packet", e);
-                            // Brief pause before retry
+                            // pause before retry
                             try {
                                 Thread.sleep(50);
                             } catch (InterruptedException ie) {
@@ -156,9 +164,12 @@ public class PeerConnectionManager {
             } finally {
                 if (receiveSocket != null && !receiveSocket.isClosed()) {
                     receiveSocket.close();
+                    receiveSocket = null;
                 }
             }
         });
+
+        receiveThread.start();
     }
 
     private void processReceivedPacket(DataPacket packet) {
@@ -219,7 +230,11 @@ public class PeerConnectionManager {
     }
 
     private void startCleanupThread() {
-        Thread cleanupThread = new Thread(() -> {
+        if (cleanupThread != null && cleanupThread.isAlive()) {
+            return; // Thread is already running
+        }
+
+        cleanupThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(5000); // Clean up every 5 seconds
@@ -422,13 +437,26 @@ public class PeerConnectionManager {
     }
 
     public void shutdown() {
-        // Interrupt all connection threads
+        isRunning = false;
+
+        // Interrupt all send threads
         for (Connection connection : connections) {
             connection.getSendThread().interrupt();
-            connection.getReceiveThread().interrupt();
         }
 
         connections = new ArrayList<>();
+
+        // Interrupt and close the receive thread
+        if (receiveThread != null) {
+            receiveThread.interrupt();
+            receiveThread = null;
+        }
+
+        // Interrupt the cleanup thread
+        if (cleanupThread != null) {
+            cleanupThread.interrupt();
+            cleanupThread = null;
+        }
 
         // Close the receive socket
         if (receiveSocket != null && !receiveSocket.isClosed()) {

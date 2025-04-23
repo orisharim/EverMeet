@@ -73,9 +73,9 @@ public class Room {
         return _connectedRoom;
     }
 
-    public static void setConnectedRoom(Room room) {
+    public static void connectToRoom(Room room) {
         _connectedRoom = room;
-        PeerConnectionManager.getInstance().updateConnections();
+        PeerConnectionManager.getInstance().connectToParticipants();
     }
 
     @NonNull

@@ -3,6 +3,7 @@ package com.example.camera.activities;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -33,6 +34,9 @@ public class LoginActivity extends AppCompatActivity {
         if(!PermissionsUtils.hasPermissions(PERMS, this)){
             PermissionsUtils.requestPermissions(PERMS, 1000, this);
         }
+
+        // lock orientation
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         _views.loginButton.setOnClickListener(v -> {
             String username = _views.usernameInput.getText().toString().trim();

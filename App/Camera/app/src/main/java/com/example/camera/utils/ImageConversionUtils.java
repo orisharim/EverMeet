@@ -11,7 +11,7 @@ import android.graphics.BitmapFactory;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
-public class ImageUtils {
+public class ImageConversionUtils {
 
     public static Bitmap imageToBitmap(Image image) {
         if (image == null || image.getFormat() != ImageFormat.YUV_420_888) {
