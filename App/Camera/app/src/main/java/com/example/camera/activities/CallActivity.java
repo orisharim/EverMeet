@@ -10,8 +10,10 @@ import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.camera.R;
+import com.example.camera.adapters.ParticipantAdapter;
 import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.PeerConnectionManager;
 import com.example.camera.utils.Camera;
@@ -19,6 +21,10 @@ import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.ImageConversionUtils;
 import com.example.camera.utils.Room;
 import com.example.camera.utils.User;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class CallActivity extends AppCompatActivity {
 
@@ -28,6 +34,8 @@ public class CallActivity extends AppCompatActivity {
 
     private boolean _isCamClosed;
     private boolean _isMuted;
+
+    private ParticipantAdapter _adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +51,21 @@ public class CallActivity extends AppCompatActivity {
 
         _isMuted = true;
         _isCamClosed = true;
+
+        _adapter = new ParticipantAdapter(new ArrayList<>());
+        _views.participantsRecyclerView.setAdapter(_adapter);
+        _views.participantsRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+
+
+        DatabaseManager.getInstance().setOnRoomDataChangeReceive(Room.getConnectedRoom(), () -> {
+            List<String> otherParticipants = Room.getConnectedRoom().getParticipants().stream()
+                    .map(User::getUsername)
+                    .filter(name -> !name.equals(User.getConnectedUser().getUsername()))
+                    .collect(Collectors.toList());
+
+            _adapter.setParticipants(otherParticipants);
+        });
+
 
         _views.micButton.setOnClickListener(view -> {
             _isMuted = !_isMuted;
@@ -63,9 +86,9 @@ public class CallActivity extends AppCompatActivity {
         });
 
         _views.leaveButton.setOnClickListener(view -> {leaveCall();});
-        PeerConnectionManager.getInstance().setOnCompleteDataReceived(bytes -> {
-            Bitmap frameDataBitmap = ImageConversionUtils.byteArrayToBitmap(bytes);
-            _views.imageView.setImageBitmap(frameDataBitmap);
+
+        PeerConnectionManager.getInstance().setOnCompleteDataReceived(data -> {
+            _adapter.updateFrame(data.getUsername(), ImageConversionUtils.byteArrayToBitmap(data.getPayload()));
         });
     }
 
@@ -89,7 +112,7 @@ public class CallActivity extends AppCompatActivity {
 
     private void leaveCall(){
         _localCam.stopCamera();
-        DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom());
+        DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
         startActivity(new Intent(this, RoomPickerActivity.class));
     }
 }

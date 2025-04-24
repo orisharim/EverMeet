@@ -35,14 +35,10 @@ public class DatabaseManager {
 
     }
 
-    public void addUser(User user){
-        addUser(user, a -> {});
-    }
-
-    public void addRoom(String roomName, Consumer<Boolean> onComplete) {
+    public Room createRoom(String roomName, Consumer<Boolean> onComplete) {
         String roomId = generateRoomId();
         if (roomId == null) {
-            return;
+            return null;
         }
 
         Room room = new Room(roomId, roomName, User.getConnectedUser().getUsername());
@@ -50,12 +46,12 @@ public class DatabaseManager {
 
         _db.child("rooms").child(roomId).setValue(room).addOnCompleteListener(task -> {
             onComplete.accept(task.isSuccessful());
-            Room.connectToRoom(room);
+            if(task.isSuccessful()){
+                Room.connectToRoom(room);
+            }
         });
-    }
 
-    public void addRoom(String roomName){
-        addRoom(roomName, a -> {});
+        return room;
     }
 
     public void addRoom(Room room, Consumer<Boolean> onComplete){
@@ -77,10 +73,6 @@ public class DatabaseManager {
         }
     }
 
-    public void addUserToRoom(User user, Room room){
-        addUserToRoom(user, room, a -> {});
-    }
-
     public void removeUserFromRoom(User user, Room room, Consumer<Boolean> onComplete){
         for(User participant : room.getParticipants()) {
             if (user.getUsername().equals(participant.getUsername())) {
@@ -98,9 +90,6 @@ public class DatabaseManager {
         }
     }
 
-    public void removeUserFromRoom(User user, Room room){
-        removeUserFromRoom(user, room, a -> {});
-    }
 
     private String generateRoomId(){
         return _db.child("rooms").push().getKey();
@@ -135,8 +124,17 @@ public class DatabaseManager {
         });
     }
 
+    public void setOnRoomDataChangeReceive(Room room, Runnable onRoomsChange) {
+        _db.child("rooms").child(room.getId()).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                onRoomsChange.run();
+            }
 
-
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
 
 
 

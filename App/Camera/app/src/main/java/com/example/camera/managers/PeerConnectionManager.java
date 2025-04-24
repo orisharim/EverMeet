@@ -3,6 +3,7 @@ package com.example.camera.managers;
 import android.util.Log;
 import android.util.Pair;
 
+import com.example.camera.utils.CompleteData;
 import com.example.camera.utils.Connection;
 import com.example.camera.utils.DataPacket;
 import com.example.camera.utils.Room;
@@ -30,7 +31,7 @@ public class PeerConnectionManager {
     private static final PeerConnectionManager INSTANCE = new PeerConnectionManager();
     
     private Supplier<byte[]> dataSupplier;
-    private Consumer<byte[]> onCompleteDataReceived;
+    private Consumer<CompleteData> onCompleteDataReceived;
     private long latestTimestamp;
 
     // Map to track incomplete frame data by frame key (timestamp + username)
@@ -60,7 +61,7 @@ public class PeerConnectionManager {
         this.dataSupplier = dataSupplier;
     }
 
-    public void setOnCompleteDataReceived(Consumer<byte[]> onCompleteDataReceived) {
+    public void setOnCompleteDataReceived(Consumer<CompleteData> onCompleteDataReceived) {
         this.onCompleteDataReceived = onCompleteDataReceived;
     }
 
@@ -168,9 +169,9 @@ public class PeerConnectionManager {
 
 
         if (!packets.isEmpty() && packets.get(0).getTotalPackets() == packets.size()) {
-            byte[] completeData = assemblePackets(packets);
-            if (completeData.length > 0) {
-                onCompleteDataReceived.accept(completeData);
+            byte[] completeDataPayload = assemblePackets(packets);
+            if (completeDataPayload.length > 0) {
+                onCompleteDataReceived.accept(new CompleteData(username, timestamp, completeDataPayload));
             }
             incompleteFrames.remove(frameKey);
         }

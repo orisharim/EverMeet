@@ -61,14 +61,21 @@ public class RoomPickerActivity extends AppCompatActivity {
     }
 
     private void createRoom(String roomName){
-        DatabaseManager.getInstance().addRoom(roomName, (success) -> { });
-        moveToCallActivity();
+        Room room = DatabaseManager.getInstance().createRoom(roomName, success -> {
+            if(success){
+                moveToCallActivity();
+            }
+        });
+
+
     }
 
     private void joinRoom(Room room){
-        DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), room);
-        Room.connectToRoom(room);
-        moveToCallActivity();
+        DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), room, success -> {
+            Room.connectToRoom(room);
+            moveToCallActivity();
+        });
+
     }
 
     private void moveToCallActivity(){
