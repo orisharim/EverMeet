@@ -1,6 +1,7 @@
 package com.example.camera.managers;
 
 import android.util.Log;
+import android.util.Pair;
 
 import com.example.camera.utils.Connection;
 import com.example.camera.utils.DataPacket;
@@ -23,19 +24,20 @@ public class PeerConnectionManager {
     private static final int PACKET_SIZE = 2000;
     private static final int PORT = 12345;
     private static final int MAX_RETRIES = 3;
-    private static final int RETRY_DELAY_MS = 100;
+    private static final int RETRY_DELAY_MS = 10;
+    private static final int CLEANUP_MS = 5000;
 
     private static final PeerConnectionManager INSTANCE = new PeerConnectionManager();
-
-    private ArrayList<Connection> connections;
+    
     private Supplier<byte[]> dataSupplier;
     private Consumer<byte[]> onCompleteDataReceived;
     private long latestTimestamp;
 
-    // Map to track incomplete frame data by FrameKey (timestamp + username)
-    private HashMap<FrameKey, List<DataPacket>> incompleteFrames;
+    // Map to track incomplete frame data by frame key (timestamp + username)
+    private HashMap<Pair<Long, String>, List<DataPacket>> incompleteFrames;
 
     // Single receive socket and thread for all connections
+    private ArrayList<Connection> connections;
     private DatagramSocket receiveSocket;
     private Thread receiveThread;
     private Thread cleanupThread;
@@ -48,39 +50,6 @@ public class PeerConnectionManager {
         onCompleteDataReceived = bytes -> {};
         incompleteFrames = new HashMap<>();
         isRunning = false;
-    }
-
-    // Simple class to create a composite key from timestamp and username
-    private static class FrameKey {
-        private final long timestamp;
-        private final String username;
-
-        public FrameKey(long timestamp, String username) {
-            this.timestamp = timestamp;
-            this.username = username;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            FrameKey frameKey = (FrameKey) o;
-            return timestamp == frameKey.timestamp &&
-                    Objects.equals(username, frameKey.username);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(timestamp, username);
-        }
-
-        public long getTimestamp() {
-            return timestamp;
-        }
-
-        public String getUsername() {
-            return username;
-        }
     }
 
     public static PeerConnectionManager getInstance() {
@@ -96,18 +65,13 @@ public class PeerConnectionManager {
     }
 
     public void connectToParticipants() {
-        // Stop existing connections and threads
         shutdown();
-
-        // Start the single receive thread if not already running
         startReceiveThread();
-
-        // Start the cleanup thread if not already running
         startCleanupThread();
 
         connections = new ArrayList<>();
 
-        // Create new send connections for all participants except self
+        // create new send connections for all participants except self
         for (User user : Room.getConnectedRoom().getParticipants()) {
             if (user.getUsername().equals(User.getConnectedUser().getUsername())) {
                 continue;
@@ -126,12 +90,11 @@ public class PeerConnectionManager {
 
     private void startReceiveThread() {
         if (receiveThread != null && receiveThread.isAlive()) {
-            return; // Thread is already running
+            return;
         }
 
         receiveThread = new Thread(() -> {
             try {
-                // Create a socket for receiving data
                 receiveSocket = new DatagramSocket(PORT);
 
                 while (!Thread.currentThread().isInterrupted()) {
@@ -144,14 +107,12 @@ public class PeerConnectionManager {
                         Log.d(PeerConnectionManager.class.getName(), "Received packet from " + packet.getUsername() +
                                 " seq:" + packet.getSequenceNumber() + "/" + packet.getTotalPackets());
 
-                        // Process the received packet
                         processReceivedPacket(packet);
                     } catch (Exception e) {
                         if (!Thread.currentThread().isInterrupted()) {
                             Log.w(PeerConnectionManager.class.getName(), "Error receiving packet", e);
-                            // pause before retry
                             try {
-                                Thread.sleep(50);
+                                Thread.sleep(RETRY_DELAY_MS);
                             } catch (InterruptedException ie) {
                                 Thread.currentThread().interrupt();
                                 break;
@@ -160,7 +121,7 @@ public class PeerConnectionManager {
                     }
                 }
             } catch (Exception e) {
-                Log.e(PeerConnectionManager.class.getName(), "Fatal error in receive thread", e);
+                Log.e(PeerConnectionManager.class.getName(), "error in receive thread", e);
             } finally {
                 if (receiveSocket != null && !receiveSocket.isClosed()) {
                     receiveSocket.close();
@@ -176,26 +137,20 @@ public class PeerConnectionManager {
         String username = packet.getUsername();
         long timestamp = packet.getTimestamp();
 
-        // Check if this is a newer frame than what we're currently processing
         if (timestamp > latestTimestamp) {
-            // Update latest timestamp and clean up old frames
+            // clean up old frames
             latestTimestamp = timestamp;
-            // Clear old frames to save memory - replace with new HashMap
-            // instead of modifying the existing one to avoid thread issues
             incompleteFrames = new HashMap<>();
         }
 
-        // Create a key for this frame
-        FrameKey frameKey = new FrameKey(timestamp, username);
+        Pair<Long, String> frameKey = new Pair<Long, String>(timestamp, username);
 
-        // Get or create the packet list for this frame
         List<DataPacket> packets = incompleteFrames.get(frameKey);
         if (packets == null) {
             packets = new ArrayList<>();
             incompleteFrames.put(frameKey, packets);
         }
 
-        // Check if this packet is already in our list (by sequence number)
         boolean isDuplicate = false;
         for (DataPacket existingPacket : packets) {
             if (existingPacket.getSequenceNumber() == packet.getSequenceNumber()) {
@@ -208,47 +163,39 @@ public class PeerConnectionManager {
             packets.add(packet);
         }
 
-        // Sort packets by sequence number
+        // sort packets by sequence number
         packets.sort((p1, p2) -> Integer.compare(p1.getSequenceNumber(), p2.getSequenceNumber()));
 
-        // Check if we have all packets for this frame
+
         if (!packets.isEmpty() && packets.get(0).getTotalPackets() == packets.size()) {
             byte[] completeData = assemblePackets(packets);
-
-            // Notify listeners only if we have valid data
             if (completeData.length > 0) {
-                try {
-                    onCompleteDataReceived.accept(completeData);
-                } catch (Exception e) {
-                    Log.e(PeerConnectionManager.class.getName(), "Error processing complete frame", e);
-                }
+                onCompleteDataReceived.accept(completeData);
             }
-
-            // Remove the completed frame
             incompleteFrames.remove(frameKey);
         }
     }
 
     private void startCleanupThread() {
         if (cleanupThread != null && cleanupThread.isAlive()) {
-            return; // Thread is already running
+            return;
         }
 
         cleanupThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    Thread.sleep(5000); // Clean up every 5 seconds
+                    Thread.sleep(CLEANUP_MS);
 
                     long currentTime = System.currentTimeMillis();
-                    List<FrameKey> keysToRemove = new ArrayList<>();
+                    List<Pair<Long, String>> keysToRemove = new ArrayList<>();
 
-                    for (FrameKey key : incompleteFrames.keySet()) {
-                        if (currentTime - key.getTimestamp() > 5000) { // 5 second timeout
+                    for (Pair<Long, String> key : incompleteFrames.keySet()) {
+                        if (currentTime - key.first > CLEANUP_MS) {
                             keysToRemove.add(key);
                         }
                     }
 
-                    for (FrameKey key : keysToRemove) {
+                    for (Pair<Long, String> key : keysToRemove) {
                         incompleteFrames.remove(key);
                     }
 
@@ -266,29 +213,29 @@ public class PeerConnectionManager {
     private DataPacket processPacket(DatagramPacket packet) {
         byte[] packetData = packet.getData();
 
-        // Extract username (8 bytes)
+        // extract username (8 bytes)
         byte[] usernameBytes = new byte[8];
         System.arraycopy(packetData, 0, usernameBytes, 0, usernameBytes.length);
         String username = new String(usernameBytes).trim();
 
-        // Extract timestamp (8 bytes)
+        // extract timestamp (8 bytes)
         byte[] timestampBytes = new byte[8];
         System.arraycopy(packetData, usernameBytes.length, timestampBytes, 0, timestampBytes.length);
         long timestamp = ByteBuffer.wrap(timestampBytes).getLong();
 
-        // Extract sequence number (4 bytes)
+        // extract sequence number (4 bytes)
         byte[] sequenceNumberBytes = new byte[4];
         System.arraycopy(packetData, usernameBytes.length + timestampBytes.length,
                 sequenceNumberBytes, 0, sequenceNumberBytes.length);
         int sequenceNumber = ByteBuffer.wrap(sequenceNumberBytes).getInt();
 
-        // Extract total packets (4 bytes)
+        // extract total packets (4 bytes)
         byte[] totalPacketsBytes = new byte[4];
         System.arraycopy(packetData, usernameBytes.length + timestampBytes.length + sequenceNumberBytes.length,
                 totalPacketsBytes, 0, totalPacketsBytes.length);
         int totalPackets = ByteBuffer.wrap(totalPacketsBytes).getInt();
 
-        // Extract payload
+        // extract payload
         int payloadStart = usernameBytes.length + timestampBytes.length +
                 sequenceNumberBytes.length + totalPacketsBytes.length;
         int payloadLength = packet.getLength() - payloadStart;
@@ -303,7 +250,6 @@ public class PeerConnectionManager {
             return new byte[0];
         }
 
-        // Calculate total payload size
         int totalSize = 0;
         for (DataPacket packet : packets) {
             totalSize += packet.getPayload().length;
@@ -311,7 +257,6 @@ public class PeerConnectionManager {
 
         ByteBuffer dataBuffer = ByteBuffer.allocate(totalSize);
 
-        // Copy data from packets in sequence order
         for (DataPacket packet : packets) {
             dataBuffer.put(packet.getPayload());
         }
@@ -326,33 +271,20 @@ public class PeerConnectionManager {
     private Thread createSendThread(User user) {
         return new Thread(() -> {
             byte[] lastData = new byte[0];
-            int lastDataHash = 0;
 
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    // Get current frame data
                     byte[] data = dataSupplier.get();
 
-                    // Skip if data is empty
-                    if (data.length == 0) {
-                        Thread.sleep(10);
+                    if (data.length == 0 || Arrays.equals(data, lastData)) {
+                        Thread.sleep(RETRY_DELAY_MS);
                         continue;
                     }
 
-                    // Calculate hash of data to avoid resending identical frames
-                    int dataHash = Arrays.hashCode(data);
-
-                    // Check if this is the same as last sent data
-                    if (dataHash == lastDataHash) {
-                        Thread.sleep(10);
-                        continue;
-                    }
-
-                    // Create a new socket for each batch of packets
                     DatagramSocket socket = new DatagramSocket();
 
                     try {
-                        // Prepare header components
+                        // prepare header values
                         byte[] usernameBytes = User.getConnectedUser().getUsername().getBytes();
                         byte[] username = new byte[8];
                         System.arraycopy(usernameBytes, 0, username, 0, Math.min(usernameBytes.length, 8));
@@ -360,29 +292,29 @@ public class PeerConnectionManager {
                         long timestamp = System.currentTimeMillis();
                         byte[] timestampBytes = ByteBuffer.allocate(Long.BYTES).putLong(timestamp).array();
 
-                        // Calculate packet sizes
+                        // calculate packet sizes
                         int headerSize = username.length + timestampBytes.length + Integer.BYTES * 2;
                         int payloadSize = PACKET_SIZE - headerSize;
                         int totalPackets = (int) Math.ceil((double) data.length / payloadSize);
 
-                        // Send packets
+                        // send packets
                         for (int i = 0; i < totalPackets; i++) {
                             int start = i * payloadSize;
                             int end = Math.min(start + payloadSize, data.length);
                             byte[] payload = new byte[end - start];
                             System.arraycopy(data, start, payload, 0, end - start);
 
-                            // Prepare the packet header and payload
+                            // prepare the packet header and payload
                             ByteBuffer packetBuffer = ByteBuffer.allocate(headerSize + payload.length);
                             packetBuffer.put(username);
                             packetBuffer.put(timestampBytes);
-                            packetBuffer.putInt(i);  // Sequence number
+                            packetBuffer.putInt(i);  // its the sequence number
                             packetBuffer.putInt(totalPackets);
                             packetBuffer.put(payload);
 
                             byte[] packetData = packetBuffer.array();
 
-                            // Try to send with retries
+                            // send with retries
                             boolean sent = false;
                             for (int attempt = 0; attempt < MAX_RETRIES && !sent; attempt++) {
                                 try {
@@ -409,8 +341,8 @@ public class PeerConnectionManager {
                         }
 
                         // Update last sent data
-                        lastData = data;
-                        lastDataHash = dataHash;
+                        lastData = Arrays.copyOf(data, data.length);
+
 
                     } finally {
                         // Close the socket after sending all packets
