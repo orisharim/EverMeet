@@ -42,11 +42,12 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
-    implementation "com.google.guava:guava:31.0.1-android"
+    implementation "com.google.guava:guava:33.3.1-android"
     implementation(platform(libs.firebase.bom))
     implementation libs.google.firebase.database
-    implementation "androidx.lifecycle:lifecycle-process:2.8.7"
-    implementation "androidx.lifecycle:lifecycle-common-java8:2.8.7"
+    implementation libs.androidx.lifecycle.process
+    implementation libs.androidx.lifecycle.common.java8
+    implementation libs.androidx.constraintlayout.v221
     implementation libs.camera.core
     implementation libs.androidx.camera.camera2
     implementation libs.androidx.camera.lifecycle

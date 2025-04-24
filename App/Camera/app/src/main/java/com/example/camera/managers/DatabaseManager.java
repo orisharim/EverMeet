@@ -1,5 +1,7 @@
 package com.example.camera.managers;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.example.camera.utils.Room;
@@ -11,6 +13,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -28,14 +31,38 @@ public class DatabaseManager {
         return _instance;
     }
 
-    public void addUser(User user, Consumer<Boolean> onComplete){
-        _db.child("users").child(user.getUsername()).setValue(true).addOnCompleteListener(task -> {
-            onComplete.accept(task.isSuccessful());
-        });
 
+    public void addUser(String username, Consumer<Boolean> onComplete) {
+        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    User existingUser = snapshot.getValue(User.class);
+                    User.setConnectedUser(existingUser);
+                    onComplete.accept(true);
+                } else {
+                    User newUser = new User(username, "", new LinkedList<>(), true);
+
+                    _db.child("users").child(username).setValue(newUser)
+                            .addOnCompleteListener(task -> {
+                                if (task.isSuccessful()) {
+                                    User.setConnectedUser(newUser);
+                                } else {
+                                    User.setConnectedUser(null);
+                                }
+                                onComplete.accept(task.isSuccessful());
+                            });
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onComplete.accept(false);
+            }
+        });
     }
 
-    public Room createRoom(String roomName, Consumer<Boolean> onComplete) {
+    public Room createNewRoom(String roomName, Consumer<Boolean> onComplete) {
         String roomId = generateRoomId();
         if (roomId == null) {
             return null;
@@ -54,15 +81,12 @@ public class DatabaseManager {
         return room;
     }
 
-    public void addRoom(Room room, Consumer<Boolean> onComplete){
+    public void addExistingRoom(Room room, Consumer<Boolean> onComplete){
         _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
             onComplete.accept(task.isSuccessful());
         });
     }
 
-    public void addRoom(Room room){
-        addRoom(room, a -> {});
-    }
 
     public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete){
         if (!room.getParticipants().contains(user)) {

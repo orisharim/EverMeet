@@ -5,15 +5,18 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.view.ViewGroup;
+import android.widget.ImageView;
 
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
+import androidx.constraintlayout.helper.widget.Flow;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.camera.R;
-import com.example.camera.adapters.ParticipantAdapter;
 import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.PeerConnectionManager;
 import com.example.camera.utils.Camera;
@@ -23,6 +26,7 @@ import com.example.camera.utils.Room;
 import com.example.camera.utils.User;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,7 +39,9 @@ public class CallActivity extends AppCompatActivity {
     private boolean _isCamClosed;
     private boolean _isMuted;
 
-    private ParticipantAdapter _adapter;
+    private HashMap<String, ImageView> participantViews = new HashMap<>();
+    private int viewIdCounter = 1000; // Ensure unique view IDs
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,9 +58,6 @@ public class CallActivity extends AppCompatActivity {
         _isMuted = true;
         _isCamClosed = true;
 
-        _adapter = new ParticipantAdapter(new ArrayList<>());
-        _views.participantsRecyclerView.setAdapter(_adapter);
-        _views.participantsRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
 
         DatabaseManager.getInstance().setOnRoomDataChangeReceive(Room.getConnectedRoom(), () -> {
@@ -63,7 +66,9 @@ public class CallActivity extends AppCompatActivity {
                     .filter(name -> !name.equals(User.getConnectedUser().getUsername()))
                     .collect(Collectors.toList());
 
-            _adapter.setParticipants(otherParticipants);
+            for (String participant: otherParticipants) {
+                addParticipantView(participant);
+            }
         });
 
 
@@ -88,7 +93,7 @@ public class CallActivity extends AppCompatActivity {
         _views.leaveButton.setOnClickListener(view -> {leaveCall();});
 
         PeerConnectionManager.getInstance().setOnCompleteDataReceived(data -> {
-            _adapter.updateFrame(data.getUsername(), ImageConversionUtils.byteArrayToBitmap(data.getPayload()));
+            updateParticipantFrame(data.getUsername(), ImageConversionUtils.byteArrayToBitmap(data.getPayload()));
         });
     }
 
@@ -115,4 +120,52 @@ public class CallActivity extends AppCompatActivity {
         DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
         startActivity(new Intent(this, RoomPickerActivity.class));
     }
+
+    private void updateParticipantFrame(String username, Bitmap frame) {
+        runOnUiThread(() -> {
+            if (!participantViews.containsKey(username)) {
+                addParticipantView(username);
+            }
+
+            ImageView view = participantViews.get(username);
+            view.setImageBitmap(frame);
+        });
+    }
+
+    private void addParticipantView(String username) {
+        ConstraintLayout container = findViewById(R.id.call);
+        ImageView imageView = new ImageView(this);
+        int viewId = viewIdCounter++;
+        imageView.setId(viewId);
+        imageView.setLayoutParams(new ViewGroup.LayoutParams(300, 300));
+        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageView.setContentDescription(username);
+
+        container.addView(imageView);
+        participantViews.put(username, imageView);
+
+        updateFlowIds();
+    }
+
+    private void removeParticipant(String username) {
+        runOnUiThread(() -> {
+            ConstraintLayout container = findViewById(R.id.call);
+            ImageView view = participantViews.remove(username);
+            if (view != null) {
+                container.removeView(view);
+                updateFlowIds();
+            }
+        });
+    }
+
+    private void updateFlowIds() {
+        Flow flow = findViewById(R.id.participantFlow);
+        int[] ids = new int[participantViews.size()];
+        int i = 0;
+        for (ImageView view : participantViews.values()) {
+            ids[i++] = view.getId();
+        }
+        flow.setReferencedIds(ids);
+    }
+
 }

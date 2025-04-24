@@ -61,10 +61,7 @@ public class LoginActivity extends AppCompatActivity {
     private void login(String username){
         String ip = getLocalIpAddress();
 
-        User newUser = new User(username, ip);
-        User.setConnectedUser(newUser);
-
-        DatabaseManager.getInstance().addUser(User.getConnectedUser(), (success) ->{
+        DatabaseManager.getInstance().addUser(username, (success) ->{
             if(success){
                 startActivity(new Intent(this, RoomPickerActivity.class));
             } else {

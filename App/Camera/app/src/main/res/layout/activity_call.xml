@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+    android:id="@+id/call"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".activities.CallActivity">
@@ -47,14 +47,18 @@
 
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/participantsRecyclerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="0dp"
-        app:layout_constraintStart_toStartOf="parent"
+    <androidx.constraintlayout.helper.widget.Flow
+        android:id="@+id/participantFlow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
-        tools:listitem="@layout/item_participant" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:flow_wrapMode="chain"
+        app:flow_horizontalGap="8dp"
+        app:flow_verticalGap="8dp"
+        app:flow_maxElementsWrap="3"
+        app:flow_horizontalAlign="center"/>
 
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"

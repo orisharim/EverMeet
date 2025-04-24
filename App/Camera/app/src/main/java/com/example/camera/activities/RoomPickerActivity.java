@@ -61,10 +61,14 @@ public class RoomPickerActivity extends AppCompatActivity {
     }
 
     private void createRoom(String roomName){
-        Room room = DatabaseManager.getInstance().createRoom(roomName, success -> {
+        Room room = DatabaseManager.getInstance().createNewRoom(roomName, success -> {
             if(success){
                 moveToCallActivity();
+            } else {
+                Toast.makeText(this, "Failed to create a room", Toast.LENGTH_SHORT).show();
+
             }
+
         });
 
 

@@ -22,7 +22,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 public class PeerConnectionManager {
-    private static final int PACKET_SIZE = 2000;
+    private static final int PACKET_SIZE = 1000;
     private static final int PORT = 12345;
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 10;
