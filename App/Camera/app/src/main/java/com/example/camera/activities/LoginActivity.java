@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -24,6 +25,9 @@ import java.util.Enumeration;
 public class LoginActivity extends AppCompatActivity {
 
     private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
+    private int MAX_USERNAME_LENGTH = 8;
+    private int MAX_PASSWORD_LENGTH = 8;
+
     private ActivityLoginBinding _views;
 
     @Override
@@ -39,11 +43,39 @@ public class LoginActivity extends AppCompatActivity {
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
+        _views.switchToSignup.setOnClickListener(v -> {
+            _views.loginCard.setVisibility(View.GONE);
+            _views.signupCard.setVisibility(View.VISIBLE);
+            _views.signupAppName.setVisibility(View.VISIBLE);
+        });
+
+        _views.switchToLogin.setOnClickListener(v -> {
+            _views.signupCard.setVisibility(View.GONE);
+            _views.loginCard.setVisibility(View.VISIBLE);
+            _views.loginAppName.setVisibility(View.VISIBLE);
+        });
+
         _views.loginButton.setOnClickListener(v -> {
-            String username = _views.usernameInput.getText().toString().trim();
+            String username = _views.loginUsername.getText().toString().trim();
+            String password = _views.loginPassword.getText().toString();
 
             if (username.isEmpty()) {
                 Toast.makeText(this, "Please enter a username", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(username.length() > MAX_USERNAME_LENGTH){
+                Toast.makeText(this, "Please enter a username that shorter than " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (password.isEmpty()) {
+                Toast.makeText(this, "Please enter a password", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(password.length() > MAX_USERNAME_LENGTH){
+                Toast.makeText(this, "Please enter a username that shorter than " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -52,16 +84,73 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
-            // Android studio forbids getting the host ip on the main thread
-            new Thread(() -> login(username)).start();
+            DatabaseManager.getInstance().doesUsernameExist(username, usernameResult -> {
+                if(usernameResult) {
+                    DatabaseManager.getInstance().checkPassword(username, password, passwordResult -> {
+                        if(passwordResult){
+                            // Android studio forbids getting the host ip on the main thread
+                            new Thread(() -> addUser(username, password)).start();
+                        } else {
+                            Toast.makeText(this, "Wrong password", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else{
+                    Toast.makeText(this, "User " + username + " doesn't exist", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        _views.signupButton.setOnClickListener(v -> {
+            String username = _views.signupUsername.getText().toString().trim();
+            String password = _views.signupPassword.getText().toString();
+
+            if(username.isEmpty()) {
+                Toast.makeText(this, "Please enter a username", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(username.length() > MAX_USERNAME_LENGTH){
+                Toast.makeText(this, "Please enter a username that shorter than " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(password.isEmpty()) {
+                Toast.makeText(this, "Please enter a password", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(password.length() > MAX_USERNAME_LENGTH){
+                Toast.makeText(this, "Please enter a username that shorter than " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            String confirmPassword = _views.signupConfirmPassword.getText().toString();
+            if(!password.equals(confirmPassword)){
+                Toast.makeText(this, "Passwords are not equal", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(!PermissionsUtils.hasPermissions(PERMS, this)){
+                Toast.makeText(this, "Allow the app the permissions it needs", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            DatabaseManager.getInstance().doesUsernameExist(username, usernameResult -> {
+                if(!usernameResult) {
+                    // Android studio forbids getting the host ip on the main thread
+                    new Thread(() -> addUser(username, password)).start();
+                } else{
+                    Toast.makeText(this, "A user named " + username + " already exists", Toast.LENGTH_SHORT).show();
+                }
+            });
 
         });
 
     }
 
-    private void login(String username){
+    private void addUser(String username, String password){
         Context thisActivity = this;
-        DatabaseManager.getInstance().addUser(username, new DatabaseManager.OnUserAdded() {
+        DatabaseManager.getInstance().addUser(username, password, new DatabaseManager.OnUserAdded() {
             @Override
             public void onSuccess(User user) {
                 User.setConnectedUser(user);

@@ -36,20 +36,50 @@ public class DatabaseManager {
         return _instance;
     }
 
+    public void doesUsernameExist(String username, Consumer<Boolean> onResult){
+        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                onResult.accept(snapshot.exists());
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onResult.accept(false);
+            }
+        });
+    }
+
+    public void checkPassword(String username, String password, Consumer<Boolean> onResult){
+        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User existingUser = snapshot.getValue(User.class);
+                if(existingUser != null)
+                    onResult.accept(existingUser.getPassword().equals(password));
+                else
+                    onResult.accept(false);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onResult.accept(false);
+            }
+        });
+    }
+
 
     public interface OnUserAdded{
         void onSuccess(User user);
         void onFail();
     }
 
-    public void addUser(String username, OnUserAdded onUserAdded) {
+    public void addUser(String username, String password, OnUserAdded onUserAdded) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     User existingUser = snapshot.getValue(User.class);
                     onUserAdded.onSuccess(existingUser);
                 } else {
-                    User newUser = new User(username, NetworkingUtils.getLocalIpAddress(), new LinkedList<>());
+                    User newUser = new User(username, password, NetworkingUtils.getLocalIpAddress(), new LinkedList<>());
 
                     _db.child("users").child(username).setValue(newUser)
                             .addOnCompleteListener(task -> {
@@ -251,7 +281,7 @@ public class DatabaseManager {
             public void onDataChange(@NonNull DataSnapshot snapshot1) {
                 User currentUser = snapshot1.getValue(User.class);
                 if (currentUser == null) {
-                    currentUser = new User(currentUsername, "", new ArrayList<>());
+
                 } else if (currentUser.getFriends() == null) {
                     currentUser.setFriends(new ArrayList<>());
                 }
@@ -266,7 +296,7 @@ public class DatabaseManager {
                     public void onDataChange(@NonNull DataSnapshot snapshot2) {
                         User fromUser = snapshot2.getValue(User.class);
                         if (fromUser == null) {
-                            fromUser = new User(fromUsername, "", new ArrayList<>());
+
                         } else if (fromUser.getFriends() == null) {
                             fromUser.setFriends(new ArrayList<>());
                         }

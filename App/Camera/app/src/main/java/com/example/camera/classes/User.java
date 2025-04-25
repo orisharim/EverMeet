@@ -12,14 +12,15 @@ public class User {
     // required for firebase
     public User(){}
 
-    public User(String username, String ip, List<String> friends) {
+    public User(String username, String password, String ip, List<String> friends) {
         _username = username;
+        _password = password;
         _ip = ip;
         _friends = friends;
     }
 
     public User(User user){
-        this(user.getUsername(), user.getIp(), user.getFriends());
+        this(user.getUsername(), user.getPassword(), user.getIp(), user.getFriends());
     }
 
     public String getUsername() {
@@ -46,6 +47,13 @@ public class User {
         this._friends = friends;
     }
 
+    public String getPassword() {
+        return _password;
+    }
+
+    public void setPassword(String password) {
+        this._password = password;
+    }
 
     @Override
     public String toString() {
@@ -57,7 +65,7 @@ public class User {
     }
 
     public static void setConnectedUser(User user){
-        _connectedUser = new User(user);
+        _connectedUser = user;
     }
 
     public static boolean isUserConnected(){

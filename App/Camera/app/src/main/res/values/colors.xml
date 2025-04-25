@@ -2,6 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-        <color name="background_color">#5ec949</color> <!-- Light background -->
-        <color name="button_bg">#FFFFFF</color> <!-- Modern button color -->
+    <color name="normal_background">#f2f2f2</color>
+    <color name="colored_background">#43C27B</color>
+    <color name="button">#131112</color>
+
+
 </resources>
