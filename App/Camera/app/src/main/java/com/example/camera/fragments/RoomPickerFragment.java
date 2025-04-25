@@ -1,4 +1,4 @@
-package com.example.camera.activities;
+package com.example.camera.fragments;
 
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -12,14 +12,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.camera.R;
+import com.example.camera.activities.CallActivity;
 import com.example.camera.adapters.RoomAdapter;
 import com.example.camera.databinding.FragmentRoomPickerBinding;
-import com.example.camera.fragments.FriendsFragment;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;

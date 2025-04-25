@@ -10,7 +10,12 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -30,6 +35,23 @@ public class DatabaseManager {
     }
 
 
+    private String getLocalIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
     public void addUser(String username, Consumer<Boolean> onComplete) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -39,7 +61,7 @@ public class DatabaseManager {
                     User.setConnectedUser(existingUser);
                     onComplete.accept(true);
                 } else {
-                    User newUser = new User(username, "", new LinkedList<>(), true);
+                    User newUser = new User(username, getLocalIpAddress(), new LinkedList<>(), true);
 
                     _db.child("users").child(username).setValue(newUser)
                             .addOnCompleteListener(task -> {
@@ -88,12 +110,13 @@ public class DatabaseManager {
 
     public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete){
         if (!room.getParticipants().contains(user)) {
-            room.getParticipants().add(User.getConnectedUser());
+            room.getParticipants().add(user);
             _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
                 onComplete.accept(task.isSuccessful());
             });;
         }
     }
+
 
     public void removeUserFromRoom(User user, Room room, Consumer<Boolean> onComplete){
         for(User participant : room.getParticipants()) {

@@ -58,8 +58,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void login(String username){
-        String ip = getLocalIpAddress();
-
         DatabaseManager.getInstance().addUser(username, (success) ->{
             if(success){
                 startActivity(new Intent(this, HomeActivity.class));
@@ -69,22 +67,7 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
-                NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
-                        return inetAddress.getHostAddress();
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            ex.printStackTrace();
-        }
-        return null;
-    }
+
 
     @Override
     protected void onDestroy() {

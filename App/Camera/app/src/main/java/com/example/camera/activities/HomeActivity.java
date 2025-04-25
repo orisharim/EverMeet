@@ -7,9 +7,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
 import com.example.camera.R;
-import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.databinding.ActivityHomeBinding;
 import com.example.camera.fragments.FriendsFragment;
+import com.example.camera.fragments.RoomPickerFragment;
 
 public class HomeActivity extends AppCompatActivity {
 
