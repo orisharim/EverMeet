@@ -2,6 +2,7 @@ package com.example.camera.activities;
 
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
@@ -9,6 +10,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityLoginBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.PermissionsUtils;
@@ -58,11 +60,17 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void login(String username){
-        DatabaseManager.getInstance().addUser(username, (success) ->{
-            if(success){
-                startActivity(new Intent(this, HomeActivity.class));
-            } else {
-                Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show();
+        Context thisActivity = this;
+        DatabaseManager.getInstance().addUser(username, new DatabaseManager.OnUserAdded() {
+            @Override
+            public void onSuccess(User user) {
+                User.setConnectedUser(user);
+                startActivity(new Intent(thisActivity, HomeActivity.class));
+            }
+
+            @Override
+            public void onFail() {
+                Toast.makeText(thisActivity, "Login failed", Toast.LENGTH_SHORT).show();
             }
         });
     }

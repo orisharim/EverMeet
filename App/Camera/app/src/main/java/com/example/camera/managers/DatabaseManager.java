@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
+import com.example.camera.utils.NetworkingUtils;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -24,6 +25,7 @@ public class DatabaseManager {
 
 
     private static DatabaseManager _instance = new DatabaseManager();
+
     private DatabaseReference _db;
 
     private DatabaseManager(){
@@ -35,78 +37,75 @@ public class DatabaseManager {
     }
 
 
-    private String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
-                NetworkInterface intf = en.nextElement();
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
-                        return inetAddress.getHostAddress();
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            ex.printStackTrace();
-        }
-        return null;
+    public interface OnUserAdded{
+        void onSuccess(User user);
+        void onFail();
     }
 
-    public void addUser(String username, Consumer<Boolean> onComplete) {
+    public void addUser(String username, OnUserAdded onUserAdded) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     User existingUser = snapshot.getValue(User.class);
-                    User.setConnectedUser(existingUser);
-                    onComplete.accept(true);
+                    onUserAdded.onSuccess(existingUser);
                 } else {
-                    User newUser = new User(username, getLocalIpAddress(), new LinkedList<>(), true);
+                    User newUser = new User(username, NetworkingUtils.getLocalIpAddress(), new LinkedList<>());
 
                     _db.child("users").child(username).setValue(newUser)
                             .addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                    User.setConnectedUser(newUser);
-                                } else {
-                                    User.setConnectedUser(null);
+                                if(task.isSuccessful()){
+                                    onUserAdded.onSuccess(newUser);
+                                } else{
+                                    onUserAdded.onFail();
                                 }
-                                onComplete.accept(task.isSuccessful());
                             });
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                onComplete.accept(false);
+                onUserAdded.onFail();
             }
         });
     }
 
-    public Room createNewRoom(String roomName, Consumer<Boolean> onComplete) {
+    public interface OnRoomAdded{
+        void onSuccess(Room room);
+        void onFail();
+    }
+
+    public void addRoom(String roomName, String creator, OnRoomAdded onRoomAdded) {
         String roomId = generateRoomId();
         if (roomId == null) {
-            return null;
+            onRoomAdded.onFail();
+            return;
         }
 
-        Room room = new Room(roomId, roomName, User.getConnectedUser().getUsername());
-        room.getParticipants().add(User.getConnectedUser());
+        _db.child("rooms").child(roomId).addListenerForSingleValueEvent(new ValueEventListener() {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Room existingRoom = snapshot.getValue(Room.class);
+                    onRoomAdded.onSuccess(existingRoom);
+                } else {
+                    Room newRoom = new Room(roomId, roomName, creator);
 
-        _db.child("rooms").child(roomId).setValue(room).addOnCompleteListener(task -> {
-            onComplete.accept(task.isSuccessful());
-            if(task.isSuccessful()){
-                Room.connectToRoom(room);
+                    _db.child("rooms").child(roomId).setValue(newRoom)
+                            .addOnCompleteListener(task -> {
+                                if(task.isSuccessful()){
+                                    onRoomAdded.onSuccess(newRoom);
+                                } else{
+                                    onRoomAdded.onFail();
+                                }
+                            });
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onRoomAdded.onFail();
             }
         });
-
-        return room;
     }
-
-    public void addExistingRoom(Room room, Consumer<Boolean> onComplete){
-        _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
-            onComplete.accept(task.isSuccessful());
-        });
-    }
-
 
     public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete){
         if (!room.getParticipants().contains(user)) {
@@ -153,14 +152,6 @@ public class DatabaseManager {
                     }
                 }
 
-                if(Room.getConnectedRoom() != null){
-                    for (Room room: rooms) {
-                        if(room.getId().equals(Room.getConnectedRoom().getId())){
-                            Room.connectToRoom(new Room(room));
-                        }
-                    }
-                }
-
                 onRoomsChange.accept(rooms);
             }
 
@@ -169,11 +160,13 @@ public class DatabaseManager {
         });
     }
 
-    public void setOnRoomDataChange(Room room, Runnable onRoomsChange) {
-        _db.child("rooms").child(room.getId()).addValueEventListener(new ValueEventListener() {
+    public void setOnRoomDataChange(String roomId, Consumer<Room> onRoomChange) {
+        _db.child("rooms").child(roomId).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                onRoomsChange.run();
+                Room newRoom = snapshot.getValue(Room.class);
+
+                onRoomChange.accept(newRoom);
             }
 
             @Override
@@ -181,8 +174,8 @@ public class DatabaseManager {
         });
     }
 
-    public void setOnFriendRequestsReceived(Consumer<List<String>> onFriendRequestsReceived){
-        _db.child("friend_requests").child(User.getConnectedUser().getUsername())
+    public void setOnFriendRequestsReceived(String username, Consumer<List<String>> onFriendRequestsReceived){
+        _db.child("friend_requests").child(username)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -203,8 +196,8 @@ public class DatabaseManager {
                 });
     }
 
-    public void setOnFriendsDataReceived(Consumer<List<String>> onFriendsDataReceived){
-        _db.child("users").child(User.getConnectedUser().getUsername()).child("friends")
+    public void setOnFriendsDataReceived(String username, Consumer<List<String>> onFriendsDataReceived){
+        _db.child("users").child(username).child("friends")
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -231,7 +224,7 @@ public class DatabaseManager {
         });
     }
 
-    public void removeFriendRequest(String currentUsername, String fromUsername) {
+    public void removeFriendRequest(String currentUsername, String fromUsername, Consumer<Boolean> onComplete) {
         FirebaseDatabase.getInstance().getReference("friend_requests").child(currentUsername)
                 .orderByValue().equalTo(fromUsername).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -239,10 +232,13 @@ public class DatabaseManager {
                         for (DataSnapshot child : snapshot.getChildren()) {
                             child.getRef().removeValue();
                         }
+                        onComplete.accept(true);
                     }
 
                     @Override
-                    public void onCancelled(@NonNull DatabaseError error) {}
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        onComplete.accept(false);
+                    }
         });
     }
 
@@ -255,7 +251,7 @@ public class DatabaseManager {
             public void onDataChange(@NonNull DataSnapshot snapshot1) {
                 User currentUser = snapshot1.getValue(User.class);
                 if (currentUser == null) {
-                    currentUser = new User(currentUsername, "", new ArrayList<>(), true);
+                    currentUser = new User(currentUsername, "", new ArrayList<>());
                 } else if (currentUser.getFriends() == null) {
                     currentUser.setFriends(new ArrayList<>());
                 }
@@ -270,7 +266,7 @@ public class DatabaseManager {
                     public void onDataChange(@NonNull DataSnapshot snapshot2) {
                         User fromUser = snapshot2.getValue(User.class);
                         if (fromUser == null) {
-                            fromUser = new User(fromUsername, "", new ArrayList<>(), true);
+                            fromUser = new User(fromUsername, "", new ArrayList<>());
                         } else if (fromUser.getFriends() == null) {
                             fromUser.setFriends(new ArrayList<>());
                         }

@@ -47,8 +47,8 @@ public class FriendsFragment extends Fragment {
         _views.friendsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         _views.friendsRecyclerView.setAdapter(friendsAdapter);
 
-        DatabaseManager.getInstance().setOnFriendRequestsReceived(requestAdapter::setRequests);
-        DatabaseManager.getInstance().setOnFriendsDataReceived(friendsAdapter::setFriends);
+        DatabaseManager.getInstance().setOnFriendRequestsReceived(User.getConnectedUser().getUsername(), requestAdapter::setRequests);
+        DatabaseManager.getInstance().setOnFriendsDataReceived(User.getConnectedUser().getUsername(), friendsAdapter::setFriends);
 
         _views.btnSendFriendRequest.setOnClickListener(v -> showSendFriendRequestDialog());
     }

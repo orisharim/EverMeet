@@ -57,7 +57,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
         });
 
         holder.btnDecline.setOnClickListener(v -> {
-            DatabaseManager.getInstance().removeFriendRequest(_currentUser, requester);
+            DatabaseManager.getInstance().removeFriendRequest(_currentUser, requester, aBoolean -> {});
             _requests.remove(position);
             notifyItemRemoved(position);
         });

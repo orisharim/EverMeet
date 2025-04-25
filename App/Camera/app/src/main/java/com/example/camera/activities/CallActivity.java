@@ -56,9 +56,7 @@ public class CallActivity extends AppCompatActivity {
         _isMuted = true;
         _isCamClosed = true;
 
-
-
-        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom(), () -> {
+        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), r -> {
             List<String> otherParticipants = Room.getConnectedRoom().getParticipants().stream()
                     .map(User::getUsername)
                     .filter(name -> !name.equals(User.getConnectedUser().getUsername()))
@@ -68,7 +66,6 @@ public class CallActivity extends AppCompatActivity {
                 addParticipantView(participant);
             }
         });
-
 
         _views.micButton.setOnClickListener(view -> {
             _isMuted = !_isMuted;

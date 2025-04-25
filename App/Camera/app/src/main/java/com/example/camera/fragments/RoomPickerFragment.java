@@ -32,17 +32,12 @@ public class RoomPickerFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         _views = FragmentRoomPickerBinding.inflate(inflater, container, false);
-        return _views.getRoot(); // Inflate the fragment layout
+        return _views.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        // Lock orientation (this can still be done inside a fragment as well)
-        if (getActivity() != null) {
-            getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        }
 
         _roomAdapter = new RoomAdapter(this::joinRoom);
         _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -64,6 +59,7 @@ public class RoomPickerFragment extends Fragment {
                     String roomName = roomNameInput.getText().toString().trim();
                     if (!roomName.isEmpty()) {
                         createRoom(roomName);
+
                     } else {
                         Toast.makeText(requireContext(), "Room name cannot be empty", Toast.LENGTH_SHORT).show();
                     }
@@ -73,10 +69,17 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void createRoom(String roomName) {
-        Room room = DatabaseManager.getInstance().createNewRoom(roomName, success -> {
-            if (success) {
+        DatabaseManager.getInstance().addRoom(roomName, User.getConnectedUser().getUsername(), new DatabaseManager.OnRoomAdded(){
+            @Override
+            public void onSuccess(Room room) {
+                Room.connectToRoom(room);
+                DatabaseManager.getInstance().setOnRoomDataChange(room.getId(), Room::connectToRoom);
+                DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
                 moveToCallActivity();
-            } else {
+            }
+
+            @Override
+            public void onFail() {
                 Toast.makeText(requireContext(), "Failed to create a room", Toast.LENGTH_SHORT).show();
             }
         });
@@ -90,15 +93,14 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void moveToCallActivity() {
-        if (getActivity() != null) {
-            Intent callActivity = new Intent(getActivity(), CallActivity.class);
-            startActivity(callActivity);
-        }
+        Intent callActivity = new Intent(getActivity(), CallActivity.class);
+        startActivity(callActivity);
+
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        _views = null; // Prevent memory leaks by nulling the views
+        _views = null; // prevent memory leaks by nulling the views(recommended by someone from stack overflow)
     }
 }
