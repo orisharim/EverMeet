@@ -40,7 +40,7 @@ public class RoomPickerActivity extends AppCompatActivity {
 
         _views.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
 
-        DatabaseManager.getInstance().setOnRoomsDataChangeReceive(_roomAdapter::setRooms);
+        DatabaseManager.getInstance().setOnRoomsDataChange(_roomAdapter::setRooms);
     }
 
     private void showCreateRoomDialog(View view) {

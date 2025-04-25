@@ -119,7 +119,7 @@ public class DatabaseManager {
         return _db.child("rooms").push().getKey();
     }
 
-    public void setOnRoomsDataChangeReceive(Consumer<List<Room>> onRoomsChange){
+    public void setOnRoomsDataChange(Consumer<List<Room>> onRoomsChange){
         _db.child("rooms").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -148,7 +148,7 @@ public class DatabaseManager {
         });
     }
 
-    public void setOnRoomDataChangeReceive(Room room, Runnable onRoomsChange) {
+    public void setOnRoomDataChange(Room room, Runnable onRoomsChange) {
         _db.child("rooms").child(room.getId()).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -160,7 +160,122 @@ public class DatabaseManager {
         });
     }
 
+    public void setOnFriendRequestsReceived(Consumer<List<String>> onFriendRequestsReceived){
+        _db.child("friend_requests").child(User.getConnectedUser().getUsername())
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        List<String> requests = new ArrayList<>();
 
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            String username = child.getValue(String.class);
+                            if (username != null){
+                                requests.add(username);
+                            }
+                        }
+
+                        onFriendRequestsReceived.accept(requests);
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
+    }
+
+    public void removeFriendRequest(String currentUsername, String fromUsername) {
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("friend_requests").child(currentUsername);
+        ref.orderByValue().equalTo(fromUsername).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    child.getRef().removeValue();
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+    }
+
+    public void acceptFriendRequest(String currentUsername, String fromUsername, Consumer<Boolean> onComplete) {
+        DatabaseReference usersRef = _db.child("users");
+        DatabaseReference requestsRef = _db.child("friend_requests");
+
+        usersRef.child(currentUsername).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot1) {
+                User currentUser = snapshot1.getValue(User.class);
+                if (currentUser == null) {
+                    currentUser = new User(currentUsername, "", new ArrayList<>(), true);
+                } else if (currentUser.getFriends() == null) {
+                    currentUser.setFriends(new ArrayList<>());
+                }
+
+                if (!currentUser.getFriends().contains(fromUsername)) {
+                    currentUser.getFriends().add(fromUsername);
+                }
+
+                User finalCurrentUser = currentUser;
+                usersRef.child(fromUsername).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot2) {
+                        User fromUser = snapshot2.getValue(User.class);
+                        if (fromUser == null) {
+                            fromUser = new User(fromUsername, "", new ArrayList<>(), true);
+                        } else if (fromUser.getFriends() == null) {
+                            fromUser.setFriends(new ArrayList<>());
+                        }
+
+                        if (!fromUser.getFriends().contains(currentUsername)) {
+                            fromUser.getFriends().add(currentUsername);
+                        }
+
+                        // save updated users
+                        User finalFromUser = fromUser;
+                        usersRef.child(currentUsername).setValue(finalCurrentUser).addOnCompleteListener(task1 -> {
+                            if (task1.isSuccessful()) {
+                                usersRef.child(fromUsername).setValue(finalFromUser).addOnCompleteListener(task2 -> {
+                                    if (task2.isSuccessful()) {
+                                        // remove the friend request from currentUser's requests list
+                                        requestsRef.child(currentUsername)
+                                                .orderByValue()
+                                                .equalTo(fromUsername)
+                                                .addListenerForSingleValueEvent(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(@NonNull DataSnapshot requestSnapshot) {
+                                                        for (DataSnapshot child : requestSnapshot.getChildren()) {
+                                                            child.getRef().removeValue();
+                                                        }
+                                                        onComplete.accept(true);
+                                                    }
+
+                                                    @Override
+                                                    public void onCancelled(@NonNull DatabaseError error) {
+                                                        onComplete.accept(false);
+                                                    }
+                                                });
+                                    } else {
+                                        onComplete.accept(false);
+                                    }
+                                });
+                            } else {
+                                onComplete.accept(false);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        onComplete.accept(false);
+                    }
+                });
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onComplete.accept(false);
+            }
+        });
+    }
 
 
 

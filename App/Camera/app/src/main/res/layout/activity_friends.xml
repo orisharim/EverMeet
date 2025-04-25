@@ -8,7 +8,7 @@
 
     <!-- Header -->
     <TextView
-        android:id="@+id/tvWelcome"
+        android:id="@+id/friendsTextHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Your Friends"
@@ -18,7 +18,7 @@
 
     <!-- Friends List -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvFriends"
+        android:id="@+id/friendsRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -33,7 +33,7 @@
 
     <!-- Incoming Requests -->
     <TextView
-        android:id="@+id/tvFriendRequests"
+        android:id="@+id/friendRequestsTextHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Friend Requests"
@@ -42,12 +42,11 @@
         android:paddingBottom="8dp" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvFriendRequests"
+        android:id="@+id/friendRequestsRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_weight="1" />
 
-    <!-- Send Friend Request UI (Button to open dialog) -->
     <Button
         android:id="@+id/btnSendFriendRequest"
         android:layout_width="match_parent"

@@ -60,7 +60,7 @@ public class CallActivity extends AppCompatActivity {
 
 
 
-        DatabaseManager.getInstance().setOnRoomDataChangeReceive(Room.getConnectedRoom(), () -> {
+        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom(), () -> {
             List<String> otherParticipants = Room.getConnectedRoom().getParticipants().stream()
                     .map(User::getUsername)
                     .filter(name -> !name.equals(User.getConnectedUser().getUsername()))

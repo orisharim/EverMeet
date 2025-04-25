@@ -20,6 +20,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.camera.R;
 import com.example.camera.adapters.FriendRequestAdapter;
 import com.example.camera.adapters.FriendsAdapter;
+import com.example.camera.databinding.ActivityCallBinding;
+import com.example.camera.databinding.ActivityFriendsBinding;
+import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.User;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -31,60 +34,36 @@ import java.util.ArrayList;
 import java.util.List;
 public class FriendsActivity extends AppCompatActivity {
 
-    private RecyclerView rvFriends, rvFriendRequests;
+
+    private ActivityFriendsBinding _views;
     private FriendRequestAdapter requestAdapter;
     private FriendsAdapter friendsAdapter;
-    private List<String> friendRequests = new ArrayList<>();
+
     private List<String> friends = new ArrayList<>();
     private DatabaseReference db = FirebaseDatabase.getInstance().getReference();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        _views = ActivityFriendsBinding.inflate(getLayoutInflater());
         setContentView(R.layout.activity_friends);
 
-        // Initialize RecyclerViews
-        rvFriends = findViewById(R.id.rvFriends);
-        rvFriendRequests = findViewById(R.id.rvFriendRequests);
+        requestAdapter = new FriendRequestAdapter(new ArrayList<>());
+        _views.friendRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        _views.friendRequestsRecyclerView.setAdapter(requestAdapter);
 
-        // Set up the Friend Requests RecyclerView
-        requestAdapter = new FriendRequestAdapter(friendRequests, User.getConnectedUser().getUsername());
-        rvFriendRequests.setLayoutManager(new LinearLayoutManager(this));
-        rvFriendRequests.setAdapter(requestAdapter);
-
-        // Set up Friends RecyclerView
         friendsAdapter = new FriendsAdapter(friends, User.getConnectedUser().getUsername());
-        rvFriends.setLayoutManager(new LinearLayoutManager(this));
-        rvFriends.setAdapter(friendsAdapter);
+        _views.friendsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        _views.friendsRecyclerView.setAdapter(friendsAdapter);
 
-        // Load data
-        loadFriendRequests();
+        DatabaseManager.getInstance().setOnFriendRequestsReceived(requestAdapter::setRequests);
         loadFriends();
 
-        // Show dialog to send friend request
         Button btnSendRequest = findViewById(R.id.btnSendFriendRequest);
         btnSendRequest.setOnClickListener(v -> showSendFriendRequestDialog());
     }
 
-    private void loadFriendRequests() {
-        db.child("friend_requests").child(User.getConnectedUser().getUsername())
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        friendRequests.clear();
-                        for (DataSnapshot child : snapshot.getChildren()) {
-                            String username = child.getValue(String.class);
-                            if (username != null) friendRequests.add(username);
-                        }
-                        requestAdapter.notifyDataSetChanged();
-                    }
 
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Log.e("Firebase", "Error loading friend requests", error.toException());
-                    }
-                });
-    }
 
     private void loadFriends() {
         db.child("users").child(User.getConnectedUser().getUsername()).child("friends")
