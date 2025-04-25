@@ -29,6 +29,8 @@ public class RoomPickerActivity extends AppCompatActivity {
         _views = ActivityRoomPickerBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
 
+        startActivity(new Intent(this, FriendsActivity.class));
+
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
