@@ -45,9 +45,9 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
     @Override
     public void onBindViewHolder(@NonNull RequestViewHolder holder, int position) {
         String requester = _requests.get(position);
-        holder.tvUsername.setText(requester);
+        holder.username.setText(requester);
 
-        holder.btnAccept.setOnClickListener(v -> {
+        holder.accept.setOnClickListener(v -> {
             DatabaseManager.getInstance().acceptFriendRequest(_currentUser, requester, success -> {
                 if (success) {
                     _requests.remove(position);
@@ -56,7 +56,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
             });
         });
 
-        holder.btnDecline.setOnClickListener(v -> {
+        holder.decline.setOnClickListener(v -> {
             DatabaseManager.getInstance().removeFriendRequest(_currentUser, requester, aBoolean -> {});
             _requests.remove(position);
             notifyItemRemoved(position);
@@ -69,14 +69,14 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
     }
 
     public static class RequestViewHolder extends RecyclerView.ViewHolder {
-        TextView tvUsername;
-        Button btnAccept, btnDecline;
+        TextView username;
+        Button accept, decline;
 
         public RequestViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvUsername = itemView.findViewById(R.id.tvUsername);
-            btnAccept = itemView.findViewById(R.id.btnAccept);
-            btnDecline = itemView.findViewById(R.id.btnDecline);
+            username = itemView.findViewById(R.id.friendRequestUsername);
+            accept = itemView.findViewById(R.id.friendRequestAccept);
+            decline = itemView.findViewById(R.id.friendRequestDecline);
         }
     }
 

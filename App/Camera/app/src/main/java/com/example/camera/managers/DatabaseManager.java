@@ -255,7 +255,7 @@ public class DatabaseManager {
     }
 
     public void removeFriendRequest(String currentUsername, String fromUsername, Consumer<Boolean> onComplete) {
-        FirebaseDatabase.getInstance().getReference("friend_requests").child(currentUsername)
+        _db.child("friend_requests").child(currentUsername)
                 .orderByValue().equalTo(fromUsername).addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -351,6 +351,28 @@ public class DatabaseManager {
                 onComplete.accept(false);
             }
         });
+    }
+
+    public void removeFriend(String username, String friendUsername, Consumer<Boolean> onComplete){
+        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        User user = snapshot.getValue(User.class);
+                        if(user == null){
+                            onComplete.accept(false);
+                        } else {
+                            user.getFriends().remove(friendUsername);
+                            _db.child("users").child(user.getUsername()).setValue(user).addOnCompleteListener(task -> {
+                                onComplete.accept(task.isSuccessful());
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        onComplete.accept(false);
+                    }
+                });
     }
 
 

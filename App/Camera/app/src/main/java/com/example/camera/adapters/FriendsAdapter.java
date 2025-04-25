@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.camera.R;
 import com.example.camera.classes.User;
+import com.example.camera.managers.DatabaseManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,7 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.FriendVi
     @Override
     public void onBindViewHolder(@NonNull FriendViewHolder holder, int position) {
         String friend = _friends.get(position);
-        holder.tvUsername.setText(friend);
+        holder.friendUsername.setText(friend);
 
     }
 
@@ -48,11 +49,14 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.FriendVi
     }
 
     public static class FriendViewHolder extends RecyclerView.ViewHolder {
-        TextView tvUsername;
+        TextView friendUsername;
 
         public FriendViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvUsername = itemView.findViewById(R.id.tvUsername);
+            friendUsername = itemView.findViewById(R.id.friendUsername);
+            itemView.findViewById(R.id.deleteFriendButton).setOnClickListener(v -> {
+                DatabaseManager.getInstance().removeFriend(User.getConnectedUser().getUsername(), friendUsername.getText().toString(), task -> {});
+            });
         }
     }
 }

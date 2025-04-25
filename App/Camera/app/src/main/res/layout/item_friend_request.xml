@@ -7,42 +7,41 @@
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">
 
+    <TextView
+        android:id="@+id/friendRequestUsername"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:text="Friend Name"
+        android:textSize="16sp" />
+
     <LinearLayout
         android:id="@+id/buttonMenu"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@android:color/black"
-        android:gravity="right"
+        android:layout_gravity="end"
+        android:backgroundTint="@color/white"
         android:orientation="horizontal"
-        android:padding="4dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-
-        <TextView
-            android:id="@+id/tvUsername"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Friend Name"
-            android:textSize="16sp"
-            android:layout_gravity="center_vertical"
-            android:layout_marginEnd="8dp" />
+        android:padding="4dp">
 
 
         <Button
-            android:id="@+id/btnAccept"
+            android:id="@+id/friendRequestAccept"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="end"
             android:text="Accept"
-            android:layout_gravity="right"/>
+            android:backgroundTint="@color/white"
+            android:textColor="@color/black"/>
 
         <Button
-            android:id="@+id/btnDecline"
+            android:id="@+id/friendRequestDecline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="end"
             android:text="Decline"
-            android:layout_gravity="right"/>
+            android:backgroundTint="@color/white"
+            android:textColor="@color/black"/>
 
     </LinearLayout>
 
