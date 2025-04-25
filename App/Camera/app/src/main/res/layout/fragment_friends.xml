@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/friends_activity_root"
+    android:id="@+id/friends_fragment_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
 
     <!-- Header -->
+    <Button
+        android:id="@+id/btnSendFriendRequest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Send Friend Request" />
+
     <TextView
         android:id="@+id/friendsTextHeader"
         android:layout_width="match_parent"
@@ -47,10 +54,4 @@
         android:layout_height="wrap_content"
         android:layout_weight="1" />
 
-    <Button
-        android:id="@+id/btnSendFriendRequest"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Send Friend Request"
-        android:layout_marginTop="16dp"/>
 </LinearLayout>

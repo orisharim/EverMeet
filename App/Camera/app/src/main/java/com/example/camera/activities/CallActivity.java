@@ -114,7 +114,7 @@ public class CallActivity extends AppCompatActivity {
     private void leaveCall(){
         _localCam.stopCamera();
         DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
-        startActivity(new Intent(this, RoomPickerActivity.class));
+        startActivity(new Intent(this, HomeActivity.class));
     }
 
     private void updateParticipantFrame(String username, Bitmap frame) {

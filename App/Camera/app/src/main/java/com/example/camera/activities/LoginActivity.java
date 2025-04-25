@@ -62,7 +62,7 @@ public class LoginActivity extends AppCompatActivity {
 
         DatabaseManager.getInstance().addUser(username, (success) ->{
             if(success){
-                startActivity(new Intent(this, RoomPickerActivity.class));
+                startActivity(new Intent(this, HomeActivity.class));
             } else {
                 Toast.makeText(this, "Login failed", Toast.LENGTH_SHORT).show();
             }
