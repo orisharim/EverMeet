@@ -7,7 +7,7 @@ public class User {
     private String _username;
     private String _ip;
     private List<String> _friends;
-
+    private String _password;
 
     // required for firebase
     public User(){}
