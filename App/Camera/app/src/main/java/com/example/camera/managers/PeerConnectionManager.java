@@ -3,22 +3,20 @@ package com.example.camera.managers;
 import android.util.Log;
 import android.util.Pair;
 
-import com.example.camera.utils.CompleteData;
-import com.example.camera.utils.Connection;
-import com.example.camera.utils.DataPacket;
-import com.example.camera.utils.Room;
-import com.example.camera.utils.User;
+import com.example.camera.classes.CompleteData;
+import com.example.camera.classes.Connection;
+import com.example.camera.classes.DataPacket;
+import com.example.camera.classes.Room;
+import com.example.camera.classes.User;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 public class PeerConnectionManager {

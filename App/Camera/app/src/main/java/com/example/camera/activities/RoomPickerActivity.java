@@ -15,8 +15,8 @@ import com.example.camera.R;
 import com.example.camera.adapters.RoomAdapter;
 import com.example.camera.databinding.ActivityRoomPickerBinding;
 import com.example.camera.managers.DatabaseManager;
-import com.example.camera.utils.Room;
-import com.example.camera.utils.User;
+import com.example.camera.classes.Room;
+import com.example.camera.classes.User;
 
 public class RoomPickerActivity extends AppCompatActivity {
 
@@ -34,7 +34,7 @@ public class RoomPickerActivity extends AppCompatActivity {
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
-        _roomAdapter = new RoomAdapter(User.getConnectedUser(), this::joinRoom);
+        _roomAdapter = new RoomAdapter(this::joinRoom);
         _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         _views.roomsRecyclerView.setAdapter(_roomAdapter);
 

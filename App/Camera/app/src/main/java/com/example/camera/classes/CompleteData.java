@@ -1,4 +1,4 @@
-package com.example.camera.utils;
+package com.example.camera.classes;
 
 public class CompleteData {
     private String _username;

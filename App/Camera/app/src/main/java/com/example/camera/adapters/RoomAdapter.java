@@ -1,6 +1,5 @@
 package com.example.camera.adapters;
 
-import android.annotation.SuppressLint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,25 +9,23 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.camera.R;
-import com.example.camera.utils.Room;
-import com.example.camera.utils.User;
+import com.example.camera.classes.Room;
+import com.example.camera.classes.User;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder> {
-    private List<Room> rooms = new ArrayList<>();
-    private User _user;
+    private List<Room> _rooms = new ArrayList<>();
     private Consumer<Room> _onRoomClick;
 
-    public RoomAdapter(User user, Consumer<Room> onRoomClick) {
-        _user = user;
+    public RoomAdapter(Consumer<Room> onRoomClick) {
         _onRoomClick = onRoomClick;
     }
 
     public void setRooms(List<Room> rooms) {
-        this.rooms = rooms;
+        this._rooms = rooms;
         notifyDataSetChanged();
     }
 
@@ -42,13 +39,13 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull RoomViewHolder holder, int position) {
-        Room room = rooms.get(position);
+        Room room = _rooms.get(position);
         holder.bind(room);
     }
 
     @Override
     public int getItemCount() {
-        return rooms.size();
+        return _rooms.size();
     }
 
     public class RoomViewHolder extends RecyclerView.ViewHolder {

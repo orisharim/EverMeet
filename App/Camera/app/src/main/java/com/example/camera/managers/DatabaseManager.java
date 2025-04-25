@@ -1,11 +1,9 @@
 package com.example.camera.managers;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
-import com.example.camera.utils.Room;
-import com.example.camera.utils.User;
+import com.example.camera.classes.Room;
+import com.example.camera.classes.User;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -182,17 +180,46 @@ public class DatabaseManager {
                 });
     }
 
+    public void setOnFriendsDataReceived(Consumer<List<String>> onFriendsDataReceived){
+        _db.child("users").child(User.getConnectedUser().getUsername()).child("friends")
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        List<String> friends = new ArrayList<>();
+
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            String friend = child.getValue(String.class);
+                            if (friend != null){
+                                friends.add(friend);
+                            }
+                        }
+
+                        onFriendsDataReceived.accept(friends);
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
+                });
+    }
+
+    public void sendFriendRequest(String fromUsername, String toUsername, Consumer<Boolean> onComplete) {
+        _db.child("friend_requests").child(toUsername).push().setValue(fromUsername).addOnCompleteListener(task -> {
+            onComplete.accept(task.isSuccessful());
+        });
+    }
+
     public void removeFriendRequest(String currentUsername, String fromUsername) {
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("friend_requests").child(currentUsername);
-        ref.orderByValue().equalTo(fromUsername).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    child.getRef().removeValue();
-                }
-            }
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+        FirebaseDatabase.getInstance().getReference("friend_requests").child(currentUsername)
+                .orderByValue().equalTo(fromUsername).addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            child.getRef().removeValue();
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 

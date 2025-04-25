@@ -1,4 +1,4 @@
-package com.example.camera.utils;
+package com.example.camera.classes;
 
 public class DataPacket {
     private String _username;

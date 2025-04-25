@@ -14,18 +14,16 @@ import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
 import androidx.constraintlayout.helper.widget.Flow;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.camera.R;
 import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.PeerConnectionManager;
-import com.example.camera.utils.Camera;
+import com.example.camera.classes.Camera;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.ImageConversionUtils;
-import com.example.camera.utils.Room;
-import com.example.camera.utils.User;
+import com.example.camera.classes.Room;
+import com.example.camera.classes.User;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -78,7 +76,6 @@ public class CallActivity extends AppCompatActivity {
                 _views.micButton.setImageResource(R.drawable.muted_mic);
             else
                 _views.micButton.setImageResource(R.drawable.mic);
-            PeerConnectionManager.getInstance().connectToParticipants();
         });
 
         _views.cameraButton.setOnClickListener(view -> {
@@ -87,7 +84,6 @@ public class CallActivity extends AppCompatActivity {
                 _views.cameraButton.setImageResource(R.drawable.closed_cam);
             else
                 _views.cameraButton.setImageResource(R.drawable.cam);
-
         });
 
         _views.leaveButton.setOnClickListener(view -> {leaveCall();});

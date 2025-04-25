@@ -1,6 +1,5 @@
-package com.example.camera.utils;
+package com.example.camera.classes;
 
-import java.net.InetAddress;
 import java.util.List;
 
 public class User {
