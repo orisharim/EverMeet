@@ -29,10 +29,6 @@
             android:name=".fragments.FriendsFragment"
             android:exported="false" />
         <activity
-            android:name=".activities.RoomPickerActivity"
-            android:exported="false"
-            android:screenOrientation="fullSensor" />
-        <activity
             android:name=".activities.CallActivity"
             android:exported="false"
             android:screenOrientation="landscape" />

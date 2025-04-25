@@ -4,6 +4,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:backgroundTint="@color/normal_background"
     tools:context=".activities.HomeActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -29,8 +30,9 @@
             android:layout_height="0dp"
             android:orientation="horizontal"
             android:gravity="center"
-            android:background="#000"
             android:padding="4dp"
+            android:background="@color/white"
+            android:elevation="16dp"
             app:layout_constraintTop_toBottomOf="@id/fragment_container"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -42,8 +44,8 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:background="@android:color/transparent"
                 android:src="@drawable/home"
+                android:background="@android:color/transparent"
                 android:scaleType="centerInside"
                 android:contentDescription="Home" />
 
@@ -63,7 +65,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@android:color/transparent"
-                android:src="@drawable/door"
+                android:src="@drawable/logout"
                 android:scaleType="centerInside"
                 android:contentDescription="Exit" />
 
