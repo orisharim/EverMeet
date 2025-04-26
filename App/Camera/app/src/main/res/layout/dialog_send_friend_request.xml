@@ -30,12 +30,14 @@
             android:id="@+id/btnSendFriendRequest"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/colored_background"
             android:text="Send" />
 
         <Button
             android:id="@+id/btnCancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:backgroundTint="@color/colored_background"
             android:text="Cancel"
             android:layout_marginStart="8dp" />
     </LinearLayout>

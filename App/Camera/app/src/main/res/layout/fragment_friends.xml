@@ -6,14 +6,6 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Header -->
-    <Button
-        android:id="@+id/btnSendFriendRequest"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Send Friend Request" />
-
     <TextView
         android:id="@+id/friendsTextHeader"
         android:layout_width="match_parent"
@@ -28,7 +20,7 @@
         android:id="@+id/friendsRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="3"
         android:paddingBottom="16dp" />
 
     <!-- Divider -->
@@ -53,5 +45,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1" />
+
+    <ImageButton
+        android:id="@+id/btnSendFriendRequest"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|right"
+        android:layout_margin="16dp"
+        android:background="@drawable/send_friend_request_background"
+        android:src="@drawable/add"
+        android:elevation="6dp"
+        />
 
 </LinearLayout>
