@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -49,24 +50,36 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void showCreateRoomDialog(View view) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Create room");
+
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_room_creator, null);
-        EditText roomNameInput = dialogView.findViewById(R.id.roomNameInput);
+        builder.setView(dialogView);
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Create Room")
-                .setView(dialogView)
-                .setPositiveButton("Create", (dialog, which) -> {
-                    String roomName = roomNameInput.getText().toString().trim();
-                    if (!roomName.isEmpty()) {
-                        createRoom(roomName);
+        EditText roomNameInput = dialogView.findViewById(R.id.dialogRoomName);
+        Button createRoom = dialogView.findViewById(R.id.dialogCreateRoomButton);
+        Button cancelRoom = dialogView.findViewById(R.id.dialogCancelCreateRoomButton);
 
-                    } else {
-                        Toast.makeText(requireContext(), "Room name cannot be empty", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+        AlertDialog dialog = builder.create();
+
+        createRoom.setOnClickListener(v -> {
+            String roomName = roomNameInput.getText().toString().trim();
+            if (!roomName.isEmpty()) {
+                createRoom(roomName);
+                dialog.dismiss();
+            } else {
+                Toast.makeText(requireContext(), "Please enter a room name.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        cancelRoom.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
+
+
     }
+
+
 
     private void createRoom(String roomName) {
         DatabaseManager.getInstance().addRoom(roomName, User.getConnectedUser().getUsername(), new DatabaseManager.OnRoomAdded(){

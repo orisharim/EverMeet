@@ -4,43 +4,44 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/roomPicker"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".activities.RoomPickerActivity">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:id="@+id/roomListLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/normal_background"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="#FFFFFF">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+
 
             <TextView
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_weight="0.1"
                 android:text="Available Rooms"
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
-            <Button
-                android:id="@+id/createRoomButton"
-                android:layout_width="wrap_content"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/roomsRecyclerView"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Create Room" />
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/createRoomButton"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="bottom|right"
+                android:layout_margin="16dp"
+                android:background="@drawable/send_friend_request_background"
+                android:src="@drawable/add"
+                android:elevation="6dp" />
         </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/roomsRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

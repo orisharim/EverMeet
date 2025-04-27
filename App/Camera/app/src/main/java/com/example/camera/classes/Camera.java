@@ -21,13 +21,13 @@ public class Camera {
     private Preview _cameraPreview;
     private final ExecutorService _cameraExecutor;
     private ImageAnalysis _frameReader;
-    private Consumer<ImageProxy> _frameHandler;
+    private Consumer<ImageProxy> _onFrameReceived;
 
-    public Camera(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> frameHandler) {
+    public Camera(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> onFrameReceived) {
         _activity = activity;
         _previewView = previewView;
         _cameraExecutor = Executors.newFixedThreadPool(2); // Increased threads for performance
-        _frameHandler = frameHandler;
+        _onFrameReceived = onFrameReceived;
     }
 
     public Camera(AppCompatActivity activity, PreviewView previewView) {
@@ -63,7 +63,7 @@ public class Camera {
     }
 
     public void setFrameHandler(Consumer<ImageProxy> onFrameReceive) {
-        _frameHandler = onFrameReceive;
+        _onFrameReceived = onFrameReceive;
     }
 
     public void stopCamera() {
@@ -75,8 +75,8 @@ public class Camera {
 
     private void onFrameReceive(ImageProxy image) {
         try {
-            if (_frameHandler != null) {
-                _frameHandler.accept(image);
+            if (_onFrameReceived != null) {
+                _onFrameReceived.accept(image);
             }
         } catch (Exception e) {
             Log.e("Camera", "Error processing frame", e);
