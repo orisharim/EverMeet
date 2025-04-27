@@ -71,20 +71,22 @@ public class PeerConnectionManager {
         connections = new ArrayList<>();
 
         // create new send connections for all participants except self
-        for (User user : Room.getConnectedRoom().getParticipants()) {
-            if (user.getUsername().equals(User.getConnectedUser().getUsername())) {
+        for (String username : Room.getConnectedRoom().getParticipants().keySet()) {
+            if (username.equals(User.getConnectedUser().getUsername())) {
                 continue;
             }
-            connections.add(createConnection(user));
+            connections.add(createConnection(username, Room.getConnectedRoom().getParticipants().get(username)));
         }
 
         isRunning = true;
     }
 
-    private Connection createConnection(User user) {
-        Thread sendThread = createSendThread(user);
+
+
+    private Connection createConnection(String username, String userIp) {
+        Thread sendThread = createSendThread(userIp);
         sendThread.start();
-        return new Connection(user, sendThread);
+        return new Connection(username, userIp, sendThread);
     }
 
     private void startReceiveThread() {
@@ -267,7 +269,7 @@ public class PeerConnectionManager {
         return completeData;
     }
 
-    private Thread createSendThread(User user) {
+    private Thread createSendThread(String receiverIp) {
         return new Thread(() -> {
             byte[] lastData = new byte[0];
 
@@ -320,7 +322,7 @@ public class PeerConnectionManager {
                                     DatagramPacket packet = new DatagramPacket(
                                             packetData,
                                             packetData.length,
-                                            InetAddress.getByName(user.getIp()),
+                                            InetAddress.getByName(receiverIp),
                                             PORT
                                     );
                                     socket.send(packet);
@@ -335,7 +337,7 @@ public class PeerConnectionManager {
                             }
 
                             if (sent) {
-                                Log.d(PeerConnectionManager.class.getName(), "Sent packet #" + i + " of " + totalPackets + " to " + user.getUsername());
+                                Log.d(PeerConnectionManager.class.getName(), "Sent packet #" + i + " of " + totalPackets + " to " + username);
                             }
                         }
 

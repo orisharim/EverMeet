@@ -4,29 +4,29 @@ import androidx.annotation.NonNull;
 
 import com.example.camera.managers.PeerConnectionManager;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Room {
     private static Room _connectedRoom = null;
     private String _id;
     private String _name;
     private String _creator;
-    private List<User> _participants;
+    private Map<String, String> _participants;
 
     // Required empty constructor for Firebase
     public Room() {
-        _participants = new ArrayList<>();
+        _participants = new HashMap<>();
     }
 
     public Room(String id, String name, String creator) {
         this._id = id;
         this._name = name;
         this._creator = creator;
-        _participants = new ArrayList<>();
+        _participants = new HashMap<>();
     }
 
-    public Room(String id, String name, String creator, List<User> participants) {
+    public Room(String id, String name, String creator, Map<String, String> participants) {
         this._id = id;
         this._name = name;
         this._creator = creator;
@@ -61,11 +61,11 @@ public class Room {
         this._creator = creator;
     }
 
-    public List<User> getParticipants() {
+    public Map<String, String> getParticipants() {
         return _participants;
     }
 
-    public void setParticipants(List<User> participants) {
+    public void setParticipants(Map<String, String> participants) {
         this._participants = participants;
     }
 
@@ -75,7 +75,10 @@ public class Room {
 
     public static void connectToRoom(Room room) {
         _connectedRoom = room;
-        PeerConnectionManager.getInstance().connectToParticipants();
+        if(room != null)
+            PeerConnectionManager.getInstance().connectToParticipants();
+        else
+            PeerConnectionManager.getInstance().shutdown();
     }
 
     @NonNull

@@ -1,20 +1,30 @@
 package com.example.camera.classes;
 
 public class Connection {
-    private User _user;
+    private String _username;
+    private String _userIp;
     private Thread _sendThread;
 
-    public Connection(User user, Thread sendThread) {
-        this._user = user;
+    public Connection(String username, String userIp, Thread sendThread) {
+        this._username = username;
+        this._userIp = userIp;
         this._sendThread = sendThread;
     }
 
-    public User getUser() {
-        return _user;
+    public String getUsername() {
+        return _username;
     }
 
-    public void setUser(User user) {
-        this._user = user;
+    public void setUsername(String username) {
+        this._username = username;
+    }
+
+    public String getUserIp() {
+        return _userIp;
+    }
+
+    public void setUserIp(String userIp) {
+        this._userIp = userIp;
     }
 
     public Thread getSendThread() {
@@ -25,4 +35,3 @@ public class Connection {
         this._sendThread = sendThread;
     }
 }
-

@@ -15,15 +15,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public class Camera {
-    private final AppCompatActivity _activity;
-    private final PreviewView _previewView;
+    private CameraSelector _selectedCamera;
+    private AppCompatActivity _activity;
+    private PreviewView _previewView;
     private ProcessCameraProvider _cameraProvider;
     private Preview _cameraPreview;
-    private final ExecutorService _cameraExecutor;
+    private ExecutorService _cameraExecutor;
     private ImageAnalysis _frameReader;
     private Consumer<ImageProxy> _onFrameReceived;
 
-    public Camera(AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> onFrameReceived) {
+    public Camera(CameraSelector selectedCamera, AppCompatActivity activity, PreviewView previewView, Consumer<ImageProxy> onFrameReceived) {
+        _selectedCamera = selectedCamera;
         _activity = activity;
         _previewView = previewView;
         _cameraExecutor = Executors.newFixedThreadPool(2); // Increased threads for performance
@@ -31,7 +33,7 @@ public class Camera {
     }
 
     public Camera(AppCompatActivity activity, PreviewView previewView) {
-        this(activity, previewView, null);
+        this(CameraSelector.DEFAULT_FRONT_CAMERA, activity, previewView, null);
     }
 
     public void startLocalCamera() {
@@ -42,7 +44,6 @@ public class Camera {
                 _cameraPreview = new Preview.Builder().build();
                 _cameraPreview.setSurfaceProvider(_previewView.getSurfaceProvider());
 
-                CameraSelector cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
                 _cameraProvider.unbindAll();
 
                 _frameReader = new ImageAnalysis.Builder()
@@ -54,7 +55,7 @@ public class Camera {
                 _frameReader.setAnalyzer(_cameraExecutor, this::onFrameReceive);
 
                 androidx.camera.core.Camera camera = _cameraProvider.bindToLifecycle(
-                        _activity, cameraSelector, _cameraPreview, _frameReader);
+                        _activity, _selectedCamera, _cameraPreview, _frameReader);
 
             } catch (InterruptedException | ExecutionException e) {
                 Log.e("Camera", "Use case binding failed", e);
@@ -81,7 +82,7 @@ public class Camera {
         } catch (Exception e) {
             Log.e("Camera", "Error processing frame", e);
         } finally {
-            image.close(); // Ensure image is closed to avoid memory leaks
+            image.close(); // ensure image is closed to avoid memory leaks
         }
     }
 }

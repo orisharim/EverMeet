@@ -13,6 +13,7 @@ import android.widget.ImageView;
 
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
 import androidx.constraintlayout.helper.widget.Flow;
@@ -62,21 +63,25 @@ public class CallActivity extends AppCompatActivity {
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        _localCam = new Camera(this, findViewById(R.id.previewView), this::onLocalCamFrameReceive);
+        _localCam = new Camera(CameraSelector.DEFAULT_FRONT_CAMERA, this, findViewById(R.id.previewView), this::onLocalCamFrameReceive);
         _localCam.startLocalCamera();
 
         _isMuted = true;
         _isCamClosed = true;
 
-        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), r -> {
-            List<String> otherParticipants = Room.getConnectedRoom().getParticipants().stream()
-                    .map(User::getUsername)
-                    .filter(name -> !name.equals(User.getConnectedUser().getUsername()))
-                    .collect(Collectors.toList());
+        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {
+            Room.connectToRoom(room);
 
-            for (String participant: otherParticipants) {
-                addParticipantView(participant);
+            if(Room.getConnectedRoom() != null){
+                HashMap<String, String> otherParticipants = new HashMap<>();
+                for (String username: Room.getConnectedRoom().getParticipants().keySet()) {
+                    if(!username.equals(User.getConnectedUser().getUsername()))
+                        otherParticipants.put(username,  Room.getConnectedRoom().getParticipants().get(username));
+                }
+
+                
             }
+
         });
 
         _views.micButton.setOnClickListener(view -> {
@@ -111,17 +116,21 @@ public class CallActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        leaveCall();
+        if(Room.getConnectedRoom() != null)
+            leaveCall();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        leaveCall();
+        if(Room.getConnectedRoom() != null)
+            leaveCall();
     }
 
     private void leaveCall(){
+        PeerConnectionManager.getInstance().shutdown();
         _localCam.stopCamera();
+        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {});
         DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
         startActivity(new Intent(this, HomeActivity.class));
     }

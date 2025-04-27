@@ -36,7 +36,7 @@ public class HomeActivity extends AppCompatActivity {
 
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); //lock orientation
 
-        setFragment(new FriendsFragment());
+        setFragment(new RoomPickerFragment());
 
         _views.btnRoomPickerFragment.setOnClickListener(v -> {setFragment(new RoomPickerFragment());});
         _views.btnFriendsFragment.setOnClickListener(v -> {setFragment(new FriendsFragment());});

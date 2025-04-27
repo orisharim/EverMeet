@@ -86,7 +86,6 @@ public class RoomPickerFragment extends Fragment {
             @Override
             public void onSuccess(Room room) {
                 Room.connectToRoom(room);
-                DatabaseManager.getInstance().setOnRoomDataChange(room.getId(), Room::connectToRoom);
                 DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
                 moveToCallActivity();
             }

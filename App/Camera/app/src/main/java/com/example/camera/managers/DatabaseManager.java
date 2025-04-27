@@ -28,15 +28,15 @@ public class DatabaseManager {
 
     private DatabaseReference _db;
 
-    private DatabaseManager(){
+    private DatabaseManager() {
         _db = FirebaseDatabase.getInstance().getReference();
     }
 
-    public static DatabaseManager getInstance(){
+    public static DatabaseManager getInstance() {
         return _instance;
     }
 
-    public void doesUsernameExist(String username, Consumer<Boolean> onResult){
+    public void doesUsernameExist(String username, Consumer<Boolean> onResult) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 onResult.accept(snapshot.exists());
@@ -49,11 +49,11 @@ public class DatabaseManager {
         });
     }
 
-    public void checkPassword(String username, String password, Consumer<Boolean> onResult){
+    public void checkPassword(String username, String password, Consumer<Boolean> onResult) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 User existingUser = snapshot.getValue(User.class);
-                if(existingUser != null)
+                if (existingUser != null)
                     onResult.accept(existingUser.getPassword().equals(password));
                 else
                     onResult.accept(false);
@@ -67,8 +67,9 @@ public class DatabaseManager {
     }
 
 
-    public interface OnUserAdded{
+    public interface OnUserAdded {
         void onSuccess(User user);
+
         void onFail();
     }
 
@@ -83,9 +84,9 @@ public class DatabaseManager {
 
                     _db.child("users").child(username).setValue(newUser)
                             .addOnCompleteListener(task -> {
-                                if(task.isSuccessful()){
+                                if (task.isSuccessful()) {
                                     onUserAdded.onSuccess(newUser);
-                                } else{
+                                } else {
                                     onUserAdded.onFail();
                                 }
                             });
@@ -99,8 +100,9 @@ public class DatabaseManager {
         });
     }
 
-    public interface OnRoomAdded{
+    public interface OnRoomAdded {
         void onSuccess(Room room);
+
         void onFail();
     }
 
@@ -121,9 +123,9 @@ public class DatabaseManager {
 
                     _db.child("rooms").child(roomId).setValue(newRoom)
                             .addOnCompleteListener(task -> {
-                                if(task.isSuccessful()){
+                                if (task.isSuccessful()) {
                                     onRoomAdded.onSuccess(newRoom);
-                                } else{
+                                } else {
                                     onRoomAdded.onFail();
                                 }
                             });
@@ -137,19 +139,20 @@ public class DatabaseManager {
         });
     }
 
-    public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete){
-        if (!room.getParticipants().contains(user)) {
-            room.getParticipants().add(user);
+    public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete) {
+        if (!room.getParticipants().containsKey(user.getUsername())) {
+            room.getParticipants().put(user.getUsername(), user.getIp());
             _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
                 onComplete.accept(task.isSuccessful());
-            });;
+            });
+            ;
         }
     }
 
 
-    public void removeUserFromRoom(User user, Room room, Consumer<Boolean> onComplete){
-        for(User participant : room.getParticipants()) {
-            if (user.getUsername().equals(participant.getUsername())) {
+    public void removeUserFromRoom(User user, Room room, Consumer<Boolean> onComplete) {
+        for (String participant : room.getParticipants().keySet()) {
+            if (user.getUsername().equals(participant)) {
                 room.getParticipants().remove(participant);
                 if (room.getParticipants().isEmpty()) {
                     _db.child("rooms").child(room.getId()).removeValue().addOnCompleteListener(task -> {
@@ -165,11 +168,11 @@ public class DatabaseManager {
     }
 
 
-    private String generateRoomId(){
+    private String generateRoomId() {
         return _db.child("rooms").push().getKey();
     }
 
-    public void setOnRoomsDataChange(Consumer<List<Room>> onRoomsChange){
+    public void setOnRoomsDataChange(Consumer<List<Room>> onRoomsChange) {
         _db.child("rooms").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -186,7 +189,8 @@ public class DatabaseManager {
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            public void onCancelled(@NonNull DatabaseError error) {
+            }
         });
     }
 
@@ -200,11 +204,12 @@ public class DatabaseManager {
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            public void onCancelled(@NonNull DatabaseError error) {
+            }
         });
     }
 
-    public void setOnFriendRequestsReceived(String username, Consumer<List<String>> onFriendRequestsReceived){
+    public void setOnFriendRequestsReceived(String username, Consumer<List<String>> onFriendRequestsReceived) {
         _db.child("friend_requests").child(username)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -213,7 +218,7 @@ public class DatabaseManager {
 
                         for (DataSnapshot child : snapshot.getChildren()) {
                             String username = child.getValue(String.class);
-                            if (username != null){
+                            if (username != null) {
                                 requests.add(username);
                             }
                         }
@@ -222,11 +227,12 @@ public class DatabaseManager {
                     }
 
                     @Override
-                    public void onCancelled(@NonNull DatabaseError error) {}
+                    public void onCancelled(@NonNull DatabaseError error) {
+                    }
                 });
     }
 
-    public void setOnFriendsDataReceived(String username, Consumer<List<String>> onFriendsDataReceived){
+    public void setOnFriendsDataReceived(String username, Consumer<List<String>> onFriendsDataReceived) {
         _db.child("users").child(username).child("friends")
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -235,7 +241,7 @@ public class DatabaseManager {
 
                         for (DataSnapshot child : snapshot.getChildren()) {
                             String friend = child.getValue(String.class);
-                            if (friend != null){
+                            if (friend != null) {
                                 friends.add(friend);
                             }
                         }
@@ -244,7 +250,8 @@ public class DatabaseManager {
                     }
 
                     @Override
-                    public void onCancelled(@NonNull DatabaseError error) {}
+                    public void onCancelled(@NonNull DatabaseError error) {
+                    }
                 });
     }
 
@@ -269,7 +276,7 @@ public class DatabaseManager {
                     public void onCancelled(@NonNull DatabaseError error) {
                         onComplete.accept(false);
                     }
-        });
+                });
     }
 
     public void acceptFriendRequest(String currentUsername, String fromUsername, Consumer<Boolean> onComplete) {
@@ -353,28 +360,27 @@ public class DatabaseManager {
         });
     }
 
-    public void removeFriend(String username, String friendUsername, Consumer<Boolean> onComplete){
+    public void removeFriend(String username, String friendUsername, Consumer<Boolean> onComplete) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        User user = snapshot.getValue(User.class);
-                        if(user == null){
-                            onComplete.accept(false);
-                        } else {
-                            user.getFriends().remove(friendUsername);
-                            _db.child("users").child(user.getUsername()).setValue(user).addOnCompleteListener(task -> {
-                                onComplete.accept(task.isSuccessful());
-                            });
-                        }
-                    }
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user == null) {
+                    onComplete.accept(false);
+                } else {
+                    user.getFriends().remove(friendUsername);
+                    _db.child("users").child(user.getUsername()).setValue(user).addOnCompleteListener(task -> {
+                        onComplete.accept(task.isSuccessful());
+                    });
+                }
+            }
 
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        onComplete.accept(false);
-                    }
-                });
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onComplete.accept(false);
+            }
+        });
     }
-
 
 
 }

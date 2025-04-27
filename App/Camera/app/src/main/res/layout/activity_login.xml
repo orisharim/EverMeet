@@ -77,7 +77,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:background="@android:drawable/editbox_background_normal"
-                android:drawableLeft="@android:drawable/ic_menu_edit"
+                android:drawableLeft="@drawable/pencil"
                 android:hint="Username"
                 android:inputType="text"
                 android:padding="12dp" />
@@ -88,7 +88,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 android:background="@android:drawable/editbox_background_normal"
-                android:drawableLeft="@android:drawable/ic_lock_lock"
+                android:drawableLeft="@drawable/lock"
                 android:hint="Password"
                 android:inputType="textPassword"
                 android:padding="12dp" />
