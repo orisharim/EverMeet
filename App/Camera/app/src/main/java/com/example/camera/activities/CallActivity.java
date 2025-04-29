@@ -6,18 +6,16 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
+import android.widget.GridLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
-import androidx.constraintlayout.helper.widget.Flow;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.example.camera.R;
 import com.example.camera.databinding.ActivityCallBinding;
@@ -28,22 +26,19 @@ import com.example.camera.utils.ImageConversionUtils;
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class CallActivity extends AppCompatActivity {
 
-    private final static String[] PERMS = {android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
+    private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
     private ActivityCallBinding _views;
     private Camera _localCam;
 
     private boolean _isCamClosed;
     private boolean _isMuted;
 
-    private HashMap<String, ImageView> participantViews = new HashMap<>();
-    private int viewIdCounter = 1000; // Ensure unique view IDs
-
+    private HashMap<String, ImageView> _participantViews = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,14 +46,12 @@ public class CallActivity extends AppCompatActivity {
         _views = ActivityCallBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
 
-
         // hide navigation bar
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                         | View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
         );
-
 
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
@@ -70,37 +63,48 @@ public class CallActivity extends AppCompatActivity {
         _isCamClosed = true;
 
         DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {
-            Room.connectToRoom(room);
-
-            if(Room.getConnectedRoom() != null){
-                HashMap<String, String> otherParticipants = new HashMap<>();
-                for (String username: Room.getConnectedRoom().getParticipants().keySet()) {
-                    if(!username.equals(User.getConnectedUser().getUsername()))
-                        otherParticipants.put(username,  Room.getConnectedRoom().getParticipants().get(username));
-                }
-
-                
+            if (room == null) {
+                Toast.makeText(this, "Room closed", Toast.LENGTH_SHORT).show();
+                leaveCall();
+                return;
             }
 
+            Room.connectToRoom(room);
+
+            if (Room.getConnectedRoom() != null) {
+                HashMap<String, String> otherParticipants = new HashMap<>();
+                for (String username : Room.getConnectedRoom().getParticipants().keySet()) {
+                    if (!username.equals(User.getConnectedUser().getUsername()))
+                        otherParticipants.put(username, Room.getConnectedRoom().getParticipants().get(username));
+                }
+
+                // Remove participants who have left
+                for (String username : new ArrayList<>(_participantViews.keySet())) {
+                    if (!otherParticipants.containsKey(username)) {
+                        removeParticipant(username);
+                    }
+                }
+
+                // Add new participants if needed
+                for (String username : otherParticipants.keySet()) {
+                    if (!_participantViews.containsKey(username)) {
+                        addParticipantView(username);
+                    }
+                }
+            }
         });
 
         _views.micButton.setOnClickListener(view -> {
             _isMuted = !_isMuted;
-            if(_isMuted)
-                _views.micButton.setImageResource(R.drawable.muted_mic);
-            else
-                _views.micButton.setImageResource(R.drawable.mic);
+            _views.micButton.setImageResource(_isMuted ? R.drawable.muted_mic : R.drawable.mic);
         });
 
         _views.cameraButton.setOnClickListener(view -> {
             _isCamClosed = !_isCamClosed;
-            if(_isCamClosed)
-                _views.cameraButton.setImageResource(R.drawable.closed_cam);
-            else
-                _views.cameraButton.setImageResource(R.drawable.cam);
+            _views.cameraButton.setImageResource(_isCamClosed ? R.drawable.closed_cam : R.drawable.cam);
         });
 
-        _views.leaveButton.setOnClickListener(view -> {leaveCall();});
+        _views.leaveButton.setOnClickListener(view -> leaveCall());
 
         PeerConnectionManager.getInstance().setOnCompleteDataReceived(data -> {
             updateParticipantFrame(data.getUsername(), ImageConversionUtils.byteArrayToBitmap(data.getPayload()));
@@ -108,26 +112,26 @@ public class CallActivity extends AppCompatActivity {
     }
 
     @OptIn(markerClass = ExperimentalGetImage.class)
-    private void onLocalCamFrameReceive(ImageProxy frame){
+    private void onLocalCamFrameReceive(ImageProxy frame) {
         byte[] frameData = ImageConversionUtils.bitmapToByteArray(ImageConversionUtils.imageToBitmap(frame.getImage()));
-        PeerConnectionManager.getInstance().setDataSupplier(() -> {return frameData;});
+        PeerConnectionManager.getInstance().setDataSupplier(() -> frameData);
     }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        if(Room.getConnectedRoom() != null)
+        if (Room.getConnectedRoom() != null)
             leaveCall();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        if(Room.getConnectedRoom() != null)
+        if (Room.getConnectedRoom() != null)
             leaveCall();
     }
 
-    private void leaveCall(){
+    private void leaveCall() {
         PeerConnectionManager.getInstance().shutdown();
         _localCam.stopCamera();
         DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {});
@@ -137,49 +141,37 @@ public class CallActivity extends AppCompatActivity {
 
     private void updateParticipantFrame(String username, Bitmap frame) {
         runOnUiThread(() -> {
-            if (!participantViews.containsKey(username)) {
+            if (!_participantViews.containsKey(username)) {
                 addParticipantView(username);
             }
 
-            ImageView view = participantViews.get(username);
+            ImageView view = _participantViews.get(username);
             view.setImageBitmap(frame);
         });
     }
 
     private void addParticipantView(String username) {
-        ConstraintLayout container = findViewById(R.id.call);
-        ImageView imageView = new ImageView(this);
-        int viewId = viewIdCounter++;
-        imageView.setId(viewId);
-        imageView.setLayoutParams(new ViewGroup.LayoutParams(300, 300));
-        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        imageView.setContentDescription(username);
-
-        container.addView(imageView);
-        participantViews.put(username, imageView);
-
-        updateFlowIds();
-    }
-
-    private void removeParticipant(String username) {
         runOnUiThread(() -> {
-            ConstraintLayout container = findViewById(R.id.call);
-            ImageView view = participantViews.remove(username);
-            if (view != null) {
-                container.removeView(view);
-                updateFlowIds();
-            }
+            View participantCard = getLayoutInflater().inflate(R.layout.item_camera, _views.camerasGrid, false);
+
+            ImageView imageView = participantCard.findViewById(R.id.participantCamera);
+            TextView nameView = participantCard.findViewById(R.id.participantUsername);
+
+            nameView.setText(username);
+
+            _views.camerasGrid.addView(participantCard);
+
+            _participantViews.put(username, imageView);
         });
     }
 
-    private void updateFlowIds() {
-        Flow flow = findViewById(R.id.participantFlow);
-        int[] ids = new int[participantViews.size()];
-        int i = 0;
-        for (ImageView view : participantViews.values()) {
-            ids[i++] = view.getId();
-        }
-        flow.setReferencedIds(ids);
-    }
 
+    private void removeParticipant(String username) {
+        runOnUiThread(() -> {
+            ImageView view = _participantViews.remove(username);
+            if (view != null) {
+                _views.camerasGrid.removeView(view);
+            }
+        });
+    }
 }

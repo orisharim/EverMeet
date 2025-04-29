@@ -27,7 +27,7 @@ public class PeerConnectionManager {
     private static final int CLEANUP_MS = 5000;
 
     private static final PeerConnectionManager INSTANCE = new PeerConnectionManager();
-    
+
     private Supplier<byte[]> dataSupplier;
     private Consumer<CompleteData> onCompleteDataReceived;
     private long latestTimestamp;
@@ -337,7 +337,7 @@ public class PeerConnectionManager {
                             }
 
                             if (sent) {
-                                Log.d(PeerConnectionManager.class.getName(), "Sent packet #" + i + " of " + totalPackets + " to " + username);
+                                Log.d(PeerConnectionManager.class.getName(), "Sent packet #" + i + " of " + totalPackets + " to " + receiverIp);
                             }
                         }
 
