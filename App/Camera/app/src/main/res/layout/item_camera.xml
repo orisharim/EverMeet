@@ -1,35 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/itemContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="4dp">
+    android:layout_gravity="center"
+    android:layout_margin="4dp"
+    android:layout_weight="1">
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <SurfaceView
+        android:id="@+id/participantCamera"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:keepScreenOn="true" />
 
-        <ImageView
-            android:id="@+id/participantCamera"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:scaleType="centerCrop"
-            />
-
-        <TextView
-            android:id="@+id/participantUsername"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#66000000"
-            android:padding="8dp"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:gravity="center" />
-    </LinearLayout>
-
-</androidx.cardview.widget.CardView>
+    <TextView
+        android:id="@+id/participantUsername"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="#80000000"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp" />
+</FrameLayout>

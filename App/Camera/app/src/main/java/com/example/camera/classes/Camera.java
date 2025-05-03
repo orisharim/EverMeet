@@ -1,6 +1,7 @@
 package com.example.camera.classes;
 
 import android.util.Log;
+import android.util.Size;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.*;
@@ -41,7 +42,8 @@ public class Camera {
         cameraProviderFuture.addListener(() -> {
             try {
                 _cameraProvider = cameraProviderFuture.get();
-                _cameraPreview = new Preview.Builder().build();
+                _cameraPreview = new Preview.Builder()
+                                     .setTargetResolution(new Size(1280, 720)).build();
                 _cameraPreview.setSurfaceProvider(_previewView.getSurfaceProvider());
 
                 _cameraProvider.unbindAll();

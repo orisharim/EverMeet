@@ -23,6 +23,7 @@ import com.example.camera.databinding.FragmentRoomPickerBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
+import com.example.camera.utils.NetworkingUtils;
 
 public class RoomPickerFragment extends Fragment {
 
@@ -86,7 +87,7 @@ public class RoomPickerFragment extends Fragment {
             @Override
             public void onSuccess(Room room) {
                 Room.connectToRoom(room);
-                DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
+                DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), NetworkingUtils.getIPv6Address(), Room.getConnectedRoom(), aBoolean -> {});
                 moveToCallActivity();
             }
 
@@ -98,7 +99,7 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void joinRoom(Room room) {
-        DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), room, success -> {
+        DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), NetworkingUtils.getIPv6Address(), room, success -> {
             Room.connectToRoom(room);
             moveToCallActivity();
         });

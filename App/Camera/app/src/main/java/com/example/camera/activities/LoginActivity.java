@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityLoginBinding;
 import com.example.camera.managers.DatabaseManager;
+import com.example.camera.utils.NetworkingUtils;
 import com.example.camera.utils.PermissionsUtils;
 
 import java.net.Inet4Address;

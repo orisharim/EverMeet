@@ -5,22 +5,20 @@ import java.util.List;
 public class User {
     private static User _connectedUser = null;
     private String _username;
-    private String _ip;
     private List<String> _friends;
     private String _password;
 
     // required for firebase
     public User(){}
 
-    public User(String username, String password, String ip, List<String> friends) {
+    public User(String username, String password, List<String> friends) {
         _username = username;
         _password = password;
-        _ip = ip;
         _friends = friends;
     }
 
     public User(User user){
-        this(user.getUsername(), user.getPassword(), user.getIp(), user.getFriends());
+        this(user.getUsername(), user.getPassword(), user.getFriends());
     }
 
     public String getUsername() {
@@ -29,14 +27,6 @@ public class User {
 
     public void setUsername(String username) {
         this._username = username;
-    }
-
-    public String getIp(){
-        return _ip;
-    }
-
-    public void setIp(String ip){
-        _ip = ip;
     }
 
     public List<String> getFriends() {

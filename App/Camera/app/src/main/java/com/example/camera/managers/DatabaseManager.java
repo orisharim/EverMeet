@@ -4,19 +4,13 @@ import androidx.annotation.NonNull;
 
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
-import com.example.camera.utils.NetworkingUtils;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -24,7 +18,7 @@ import java.util.function.Consumer;
 public class DatabaseManager {
 
 
-    private static DatabaseManager _instance = new DatabaseManager();
+    private static DatabaseManager INSTANCE = new DatabaseManager();
 
     private DatabaseReference _db;
 
@@ -33,7 +27,7 @@ public class DatabaseManager {
     }
 
     public static DatabaseManager getInstance() {
-        return _instance;
+        return INSTANCE;
     }
 
     public void doesUsernameExist(String username, Consumer<Boolean> onResult) {
@@ -76,21 +70,15 @@ public class DatabaseManager {
     public void addUser(String username, String password, OnUserAdded onUserAdded) {
         _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    User existingUser = snapshot.getValue(User.class);
-                    onUserAdded.onSuccess(existingUser);
-                } else {
-                    User newUser = new User(username, password, NetworkingUtils.getLocalIpAddress(), new LinkedList<>());
-
-                    _db.child("users").child(username).setValue(newUser)
-                            .addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                    onUserAdded.onSuccess(newUser);
-                                } else {
-                                    onUserAdded.onFail();
-                                }
-                            });
-                }
+                 User newUser = new User(username, password, new LinkedList<>());
+                 _db.child("users").child(username).setValue(newUser)
+                     .addOnCompleteListener(task -> {
+                         if (task.isSuccessful()) {
+                             onUserAdded.onSuccess(newUser);
+                         } else {
+                             onUserAdded.onFail();
+                         }
+                     });
             }
 
             @Override
@@ -102,7 +90,6 @@ public class DatabaseManager {
 
     public interface OnRoomAdded {
         void onSuccess(Room room);
-
         void onFail();
     }
 
@@ -139,9 +126,9 @@ public class DatabaseManager {
         });
     }
 
-    public void addUserToRoom(User user, Room room, Consumer<Boolean> onComplete) {
+    public void addUserToRoom(User user, String userIp, Room room, Consumer<Boolean> onComplete) {
         if (!room.getParticipants().containsKey(user.getUsername())) {
-            room.getParticipants().put(user.getUsername(), user.getIp());
+            room.getParticipants().put(user.getUsername(), userIp);
             _db.child("rooms").child(room.getId()).setValue(room).addOnCompleteListener(task -> {
                 onComplete.accept(task.isSuccessful());
             });
