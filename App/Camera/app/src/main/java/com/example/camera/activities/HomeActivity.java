@@ -18,7 +18,7 @@ import com.example.camera.fragments.FriendsFragment;
 import com.example.camera.fragments.RoomPickerFragment;
 
 public class HomeActivity extends AppCompatActivity {
-
+    private static final String TAG = "HomeActivity";
     private ActivityHomeBinding _views;
 
     @Override

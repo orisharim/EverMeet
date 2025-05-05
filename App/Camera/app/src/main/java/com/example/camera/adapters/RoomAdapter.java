@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder> {
+    private static final String TAG = "RoomAdapter";
     private List<Room> _rooms = new ArrayList<>();
     private Consumer<Room> _onRoomClick;
 

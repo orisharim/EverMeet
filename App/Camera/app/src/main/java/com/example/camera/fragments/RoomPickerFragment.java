@@ -26,7 +26,7 @@ import com.example.camera.classes.User;
 import com.example.camera.utils.NetworkingUtils;
 
 public class RoomPickerFragment extends Fragment {
-
+    private static final String TAG = "RoomPickerFragment";
     private FragmentRoomPickerBinding _views;
     private RoomAdapter _roomAdapter;
 

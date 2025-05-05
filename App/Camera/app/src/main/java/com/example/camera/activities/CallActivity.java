@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class CallActivity extends AppCompatActivity {
-
+    private static final String TAG = "CallActivity";
     private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
     private ActivityCallBinding _views;
     private Camera _localCam;

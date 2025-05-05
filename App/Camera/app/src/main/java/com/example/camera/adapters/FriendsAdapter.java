@@ -15,7 +15,7 @@ import com.example.camera.managers.DatabaseManager;
 import java.util.ArrayList;
 import java.util.List;
 public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.FriendViewHolder> {
-
+    private static final String TAG = "FriendsAdapter";
     private List<String> _friends;
     private String _currentUser;
 

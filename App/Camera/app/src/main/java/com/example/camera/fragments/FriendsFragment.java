@@ -23,7 +23,7 @@ import com.example.camera.databinding.FragmentFriendsBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.classes.User;
 public class FriendsFragment extends Fragment {
-
+    private static final String TAG = "FriendsFragment";
     private FragmentFriendsBinding _views;
     private FriendRequestAdapter requestAdapter;
     private FriendsAdapter friendsAdapter;

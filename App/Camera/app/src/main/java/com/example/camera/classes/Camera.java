@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public class Camera {
+    private static final String TAG = "CAMERA";
     private CameraSelector _selectedCamera;
     private AppCompatActivity _activity;
     private PreviewView _previewView;
@@ -60,7 +61,7 @@ public class Camera {
                         _activity, _selectedCamera, _cameraPreview, _frameReader);
 
             } catch (InterruptedException | ExecutionException e) {
-                Log.e("Camera", "Use case binding failed", e);
+                Log.e(TAG, "Use case binding failed", e);
             }
         }, ContextCompat.getMainExecutor(_activity));
     }

@@ -16,8 +16,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class DatabaseManager {
-
-
+    private static final String TAG = "DatabaseManager";
     private static DatabaseManager INSTANCE = new DatabaseManager();
 
     private DatabaseReference _db;

@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class CamerasAdapter extends RecyclerView.Adapter<CamerasAdapter.CameraViewHolder> {
-
+    private static final String TAG = "CamerasAdapter";
     private HashMap<String, Bitmap> _participants; // username, frame
     private ArrayList<String> _participantsUsernames;
 
@@ -128,7 +128,7 @@ public class CamerasAdapter extends RecyclerView.Adapter<CamerasAdapter.CameraVi
                 notifyItemChanged(position);
             }
         } else {
-            Log.e("CamerasAdapter", "Participant not found: " + username);
+            Log.e(TAG, "Participant not found: " + username);
         }
     }
 

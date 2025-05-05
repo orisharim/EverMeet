@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdapter.RequestViewHolder> {
-
+    private static final String TAG = "FriendRequestAdapter";
     private List<String> _requests;
     private String _currentUser;
 
