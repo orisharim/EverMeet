@@ -79,6 +79,11 @@ public class LoginActivity extends AppCompatActivity {
                 return;
             }
 
+            if(username.indexOf('.') != -1 || username.indexOf('#') != -1 || username.indexOf('$') != -1 || username.indexOf('[') != -1 || username.indexOf(']') != -1 ){
+                Toast.makeText(this, "Please enter a username that does not contain '.', '#', '$', '[', or ']' " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             if (password.isEmpty()) {
                 Toast.makeText(this, "Please enter a password", Toast.LENGTH_SHORT).show();
                 return;
@@ -98,8 +103,7 @@ public class LoginActivity extends AppCompatActivity {
                 if(usernameResult) {
                     DatabaseManager.getInstance().checkPassword(username, password, passwordResult -> {
                         if(passwordResult){
-                            // Android studio forbids getting the host ip on the main thread
-                            new Thread(() -> addUser(username, password)).start();
+                            addUser(username, password);
                         } else {
                             Toast.makeText(this, "Wrong password", Toast.LENGTH_SHORT).show();
                         }
@@ -121,6 +125,11 @@ public class LoginActivity extends AppCompatActivity {
 
             if(username.length() > MAX_USERNAME_LENGTH){
                 Toast.makeText(this, "Please enter a username that shorter than " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if(username.indexOf('.') != -1 || username.indexOf('#') != -1 || username.indexOf('$') != -1 || username.indexOf('[') != -1 || username.indexOf(']') != -1 ){
+                Toast.makeText(this, "Please enter a username that does not contain '.', '#', '$', '[', or ']' " + (MAX_USERNAME_LENGTH + 1), Toast.LENGTH_SHORT).show();
                 return;
             }
 

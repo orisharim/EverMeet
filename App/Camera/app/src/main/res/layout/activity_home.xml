@@ -39,7 +39,7 @@
             app:layout_constraintHeight_percent="0.1">
 
             <ImageButton
-                android:id="@+id/btnRoomPickerFragment"
+                android:id="@+id/roomPickerFragmentButton"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
@@ -49,7 +49,7 @@
                 android:contentDescription="Home" />
 
             <ImageButton
-                android:id="@+id/btnFriendsFragment"
+                android:id="@+id/friendsFragmentButton"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
@@ -59,7 +59,7 @@
                 android:contentDescription="Friends" />
 
             <ImageButton
-                android:id="@+id/logout"
+                android:id="@+id/logoutButton"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"

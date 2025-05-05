@@ -126,15 +126,12 @@ public class PeerConnectionManager {
 
                         DataPacket parsedPacket = parsePacket(packet);
 
-                        // Add to queue instead of processing immediately
                         boolean added = _packetQueue.offer(parsedPacket);
                         if (!added) {
-                            // Queue is full, drop older packets
                             _packetQueue.poll();
                             _packetQueue.offer(parsedPacket);
                         }
                     } catch (SocketTimeoutException ste) {
-                        // Timeout is expected, continue
                         continue;
                     } catch (Exception e) {
                         handleReceiveError(e);

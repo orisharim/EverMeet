@@ -74,9 +74,9 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
 
         public RequestViewHolder(@NonNull View itemView) {
             super(itemView);
-            username = itemView.findViewById(R.id.friendRequestUsername);
-            accept = itemView.findViewById(R.id.friendRequestAccept);
-            decline = itemView.findViewById(R.id.friendRequestDecline);
+            username = itemView.findViewById(R.id.friendRequestUsernameButton);
+            accept = itemView.findViewById(R.id.friendRequestAcceptButton);
+            decline = itemView.findViewById(R.id.friendRequestDeclineButton);
         }
     }
 

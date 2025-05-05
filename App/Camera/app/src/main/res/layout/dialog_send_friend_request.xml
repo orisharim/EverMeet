@@ -17,7 +17,7 @@
 
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etFriendUsername"
+            android:id="@+id/friendUsernameInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPersonName"
@@ -33,14 +33,14 @@
         android:layout_marginTop="16dp">
 
         <Button
-            android:id="@+id/btnSendFriendRequest"
+            android:id="@+id/sendFriendRequestButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:backgroundTint="@color/colored_background"
             android:text="Send" />
 
         <Button
-            android:id="@+id/btnCancel"
+            android:id="@+id/cancelButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:backgroundTint="@color/colored_background"

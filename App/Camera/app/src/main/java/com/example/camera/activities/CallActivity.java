@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.GridLayout;
 import android.widget.ImageView;
@@ -40,7 +41,6 @@ public class CallActivity extends AppCompatActivity {
     private boolean _isCamClosed;
     private boolean _isMuted;
 
-    private HashMap<String, Bitmap> _participantsCameras;
     private CamerasAdapter _camerasAdapter;
 
     @Override
@@ -60,12 +60,11 @@ public class CallActivity extends AppCompatActivity {
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        _participantsCameras = new HashMap<>();
         _camerasAdapter = new CamerasAdapter();
         _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 2)); // 2 columns grid
         _views.camerasGrid.setAdapter(_camerasAdapter);
 
-        _localCam = new Camera(CameraSelector.DEFAULT_FRONT_CAMERA, this, findViewById(R.id.previewView), this::onLocalCamFrameReceive);
+        _localCam = new Camera(CameraSelector.DEFAULT_FRONT_CAMERA, this, _views.localCamera, this::onLocalCamFrameReceive);
         _localCam.startLocalCamera();
 
         _isMuted = true;
@@ -113,6 +112,31 @@ public class CallActivity extends AppCompatActivity {
                 );
             });
         });
+
+        _views.localCameraFrame.setOnTouchListener(new View.OnTouchListener() {
+            private float dX, dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dX = v.getX() - event.getRawX();
+                        dY = v.getY() - event.getRawY();
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        v.animate()
+                                .x(event.getRawX() + dX)
+                                .y(event.getRawY() + dY)
+                                .setDuration(0)
+                                .start();
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        });
     }
 
     @OptIn(markerClass = ExperimentalGetImage.class)
@@ -139,7 +163,7 @@ public class CallActivity extends AppCompatActivity {
         PeerConnectionManager.getInstance().shutdown();
         _localCam.stopCamera();
         DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {});
-        DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), aBoolean -> {});
+        DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), success -> {});
         startActivity(new Intent(this, HomeActivity.class));
     }
 

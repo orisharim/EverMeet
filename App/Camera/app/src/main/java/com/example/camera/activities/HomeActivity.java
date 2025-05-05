@@ -38,9 +38,9 @@ public class HomeActivity extends AppCompatActivity {
 
         setFragment(new RoomPickerFragment());
 
-        _views.btnRoomPickerFragment.setOnClickListener(v -> {setFragment(new RoomPickerFragment());});
-        _views.btnFriendsFragment.setOnClickListener(v -> {setFragment(new FriendsFragment());});
-        _views.logout.setOnClickListener(view -> {
+        _views.roomPickerFragmentButton.setOnClickListener(v -> {setFragment(new RoomPickerFragment());});
+        _views.friendsFragmentButton.setOnClickListener(v -> {setFragment(new FriendsFragment());});
+        _views.logoutButton.setOnClickListener(view -> {
             User.setConnectedUser(null);
             startActivity(new Intent(this, LoginActivity.class));
         });

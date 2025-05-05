@@ -23,9 +23,6 @@
 
     </androidx.recyclerview.widget.RecyclerView>
 
-
-
-
     <LinearLayout
         android:id="@+id/buttonMenu"
         android:layout_width="match_parent"
@@ -62,13 +59,22 @@
 
     </LinearLayout>
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:gravity="left"
+
+    <FrameLayout
+        android:id="@+id/localCameraFrame"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@drawable/rounded_local_camera_background"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/localCamera"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

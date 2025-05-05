@@ -50,7 +50,7 @@ public class FriendsFragment extends Fragment {
         DatabaseManager.getInstance().setOnFriendRequestsReceived(User.getConnectedUser().getUsername(), requestAdapter::setRequests);
         DatabaseManager.getInstance().setOnFriendsDataReceived(User.getConnectedUser().getUsername(), friendsAdapter::setFriends);
 
-        _views.btnSendFriendRequest.setOnClickListener(v -> showSendFriendRequestDialog());
+        _views.sendFriendRequestButton.setOnClickListener(v -> showSendFriendRequestDialog());
     }
 
     private void showSendFriendRequestDialog() {
@@ -60,14 +60,14 @@ public class FriendsFragment extends Fragment {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_send_friend_request, null);
         builder.setView(dialogView);
 
-        EditText etFriendUsername = dialogView.findViewById(R.id.etFriendUsername);
-        Button btnSend = dialogView.findViewById(R.id.btnSendFriendRequest);
-        Button btnCancel = dialogView.findViewById(R.id.btnCancel);
+        EditText friendUsernameInput = dialogView.findViewById(R.id.friendUsernameInput);
+        Button sendFriendRequestButton = dialogView.findViewById(R.id.sendFriendRequestButton);
+        Button cancelButton = dialogView.findViewById(R.id.cancelButton);
 
         AlertDialog dialog = builder.create();
 
-        btnSend.setOnClickListener(v -> {
-            String targetUsername = etFriendUsername.getText().toString().trim();
+        sendFriendRequestButton.setOnClickListener(v -> {
+            String targetUsername = friendUsernameInput.getText().toString().trim();
             if (!targetUsername.isEmpty()) {
                 DatabaseManager.getInstance().sendFriendRequest(
                         User.getConnectedUser().getUsername(),
@@ -85,8 +85,7 @@ public class FriendsFragment extends Fragment {
             }
         });
 
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
     }
 
