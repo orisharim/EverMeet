@@ -1,14 +1,16 @@
 package com.example.camera.fragments;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -25,45 +27,53 @@ import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
 import com.example.camera.utils.NetworkingUtils;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
+
 public class RoomPickerFragment extends Fragment {
+
     private static final String TAG = "RoomPickerFragment";
-    private FragmentRoomPickerBinding _views;
-    private RoomAdapter _roomAdapter;
+    private FragmentRoomPickerBinding binding;
+    private RoomAdapter roomAdapter;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        _views = FragmentRoomPickerBinding.inflate(inflater, container, false);
-        return _views.getRoot();
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        binding = FragmentRoomPickerBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        _roomAdapter = new RoomAdapter(this::joinRoom);
-        _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        _views.roomsRecyclerView.setAdapter(_roomAdapter);
+        roomAdapter = new RoomAdapter(this::joinRoom);
+        binding.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.roomsRecyclerView.setAdapter(roomAdapter);
 
-        _views.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
+        binding.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
 
-        DatabaseManager.getInstance().setOnRoomsDataChange(_roomAdapter::setRooms);
+        DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
     }
 
     private void showCreateRoomDialog(View view) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("Create room");
 
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_room_creator, null);
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_room_creator, null);
         builder.setView(dialogView);
 
         EditText roomNameInput = dialogView.findViewById(R.id.dialogRoomName);
-        Button createRoom = dialogView.findViewById(R.id.dialogCreateRoomButton);
-        Button cancelRoom = dialogView.findViewById(R.id.dialogCancelCreateRoomButton);
+        Button createRoomButton = dialogView.findViewById(R.id.dialogCreateRoomButton);
+        Button cancelRoomButton = dialogView.findViewById(R.id.dialogCancelCreateRoomButton);
+        ImageButton setDateTimeButton = dialogView.findViewById(R.id.dialogSetTimeButton);
 
         AlertDialog dialog = builder.create();
 
-        createRoom.setOnClickListener(v -> {
+        createRoomButton.setOnClickListener(v -> {
             String roomName = roomNameInput.getText().toString().trim();
             if (!roomName.isEmpty()) {
                 createRoom(roomName);
@@ -73,47 +83,77 @@ public class RoomPickerFragment extends Fragment {
             }
         });
 
-        cancelRoom.setOnClickListener(v -> dialog.dismiss());
+        cancelRoomButton.setOnClickListener(v -> dialog.dismiss());
+
+        setDateTimeButton.setOnClickListener(v -> pickDateTime(setDateTimeButton));
 
         dialog.show();
-
-
     }
 
+    private void pickDateTime(ImageButton buttonToUpdate) {
+        Calendar calendar = Calendar.getInstance();
 
+        new DatePickerDialog(requireContext(),
+                (view, year, month, dayOfMonth) -> new TimePickerDialog(requireContext(),
+                        (timeView, hourOfDay, minute) -> {
+                            Calendar selectedDateTime = Calendar.getInstance();
+                            selectedDateTime.set(year, month, dayOfMonth, hourOfDay, minute);
+                            String formatted = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                    .format(selectedDateTime.getTime());
+
+                            // TODO: store selectedDateTime if needed
+                        },
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE),
+                        true
+                ).show(),
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+        ).show();
+    }
 
     private void createRoom(String roomName) {
-        DatabaseManager.getInstance().addRoom(roomName, User.getConnectedUser().getUsername(), new DatabaseManager.OnRoomAdded(){
-            @Override
-            public void onSuccess(Room room) {
-                Room.connectToRoom(room);
-                DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), NetworkingUtils.getIPv6Address(), Room.getConnectedRoom(), aBoolean -> {});
-                moveToCallActivity();
-            }
+        DatabaseManager.getInstance().addRoom(roomName, User.getConnectedUser().getUsername(),
+                new DatabaseManager.OnRoomAdded() {
+                    @Override
+                    public void onSuccess(Room room) {
+                        Room.connectToRoom(room);
+                        DatabaseManager.getInstance().addUserToRoom(
+                                User.getConnectedUser(),
+                                NetworkingUtils.getIPv6Address(),
+                                Room.getConnectedRoom(),
+                                success -> {}
+                        );
+                        moveToCallActivity();
+                    }
 
-            @Override
-            public void onFail() {
-                Toast.makeText(requireContext(), "Failed to create a room", Toast.LENGTH_SHORT).show();
-            }
-        });
+                    @Override
+                    public void onFail() {
+                        Toast.makeText(requireContext(), "Failed to create a room", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void joinRoom(Room room) {
-        DatabaseManager.getInstance().addUserToRoom(User.getConnectedUser(), NetworkingUtils.getIPv6Address(), room, success -> {
-            Room.connectToRoom(room);
-            moveToCallActivity();
-        });
+        DatabaseManager.getInstance().addUserToRoom(
+                User.getConnectedUser(),
+                NetworkingUtils.getIPv6Address(),
+                room,
+                success -> {
+                    Room.connectToRoom(room);
+                    moveToCallActivity();
+                });
     }
 
     private void moveToCallActivity() {
-        Intent callActivity = new Intent(getActivity(), CallActivity.class);
-        startActivity(callActivity);
-
+        Intent intent = new Intent(getActivity(), CallActivity.class);
+        startActivity(intent);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        _views = null; // prevent memory leaks by nulling the views(recommended by someone from stack overflow)
+        binding = null; // avoid memory leaks
     }
 }
