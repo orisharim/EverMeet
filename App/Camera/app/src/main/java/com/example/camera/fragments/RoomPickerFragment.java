@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -34,15 +35,15 @@ import java.util.Locale;
 public class RoomPickerFragment extends Fragment {
 
     private static final String TAG = "RoomPickerFragment";
-    private FragmentRoomPickerBinding binding;
+    private FragmentRoomPickerBinding _views;
     private RoomAdapter roomAdapter;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentRoomPickerBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        _views = FragmentRoomPickerBinding.inflate(inflater, container, false);
+        return _views.getRoot();
     }
 
     @Override
@@ -50,10 +51,10 @@ public class RoomPickerFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         roomAdapter = new RoomAdapter(this::joinRoom);
-        binding.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.roomsRecyclerView.setAdapter(roomAdapter);
+        _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        _views.roomsRecyclerView.setAdapter(roomAdapter);
 
-        binding.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
+        _views.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
 
         DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
     }
@@ -70,13 +71,28 @@ public class RoomPickerFragment extends Fragment {
         Button createRoomButton = dialogView.findViewById(R.id.dialogCreateRoomButton);
         Button cancelRoomButton = dialogView.findViewById(R.id.dialogCancelCreateRoomButton);
         ImageButton setDateTimeButton = dialogView.findViewById(R.id.dialogSetTimeButton);
+        ImageButton cancelScheduleButton = dialogView.findViewById(R.id.dialogCancelScheduledTimeButton);
+        TextView scheduledTimeText = dialogView.findViewById(R.id.dialogShowScheduledMeetingTimeText);
 
         AlertDialog dialog = builder.create();
+
+        final Calendar[] scheduledTime = new Calendar[1];  // To store picked date & time
 
         createRoomButton.setOnClickListener(v -> {
             String roomName = roomNameInput.getText().toString().trim();
             if (!roomName.isEmpty()) {
-                createRoom(roomName);
+                if (scheduledTime[0] != null) {
+                    // Room is scheduled for later – optional: save scheduled time in DB
+                    Toast.makeText(requireContext(),
+                            "Room scheduled for: " +
+                                    new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                            .format(scheduledTime[0].getTime()),
+                            Toast.LENGTH_LONG).show();
+                    // TODO: Implement room scheduling logic if needed
+                } else {
+                    // No scheduled time – create immediately
+                    createRoom(roomName);
+                }
                 dialog.dismiss();
             } else {
                 Toast.makeText(requireContext(), "Please enter a room name.", Toast.LENGTH_SHORT).show();
@@ -85,12 +101,25 @@ public class RoomPickerFragment extends Fragment {
 
         cancelRoomButton.setOnClickListener(v -> dialog.dismiss());
 
-        setDateTimeButton.setOnClickListener(v -> pickDateTime(setDateTimeButton));
+        setDateTimeButton.setOnClickListener(v ->
+                pickDateTime(scheduledTime, scheduledTimeText, cancelScheduleButton));
+
+        cancelScheduleButton.setOnClickListener(v -> {
+            scheduledTime[0] = null;
+            scheduledTimeText.setText("No scheduled time");
+            cancelScheduleButton.setVisibility(View.GONE);
+        });
+
+        cancelScheduleButton.setVisibility(View.GONE); // Hide cancel button initially
+        scheduledTimeText.setText("No scheduled time");
 
         dialog.show();
     }
 
-    private void pickDateTime(ImageButton buttonToUpdate) {
+
+    private void pickDateTime(Calendar[] scheduledTime,
+                              TextView scheduledTimeText,
+                              ImageButton cancelScheduleButton) {
         Calendar calendar = Calendar.getInstance();
 
         new DatePickerDialog(requireContext(),
@@ -98,10 +127,12 @@ public class RoomPickerFragment extends Fragment {
                         (timeView, hourOfDay, minute) -> {
                             Calendar selectedDateTime = Calendar.getInstance();
                             selectedDateTime.set(year, month, dayOfMonth, hourOfDay, minute);
+                            scheduledTime[0] = selectedDateTime;
+
                             String formatted = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                                     .format(selectedDateTime.getTime());
-
-                            // TODO: store selectedDateTime if needed
+                            scheduledTimeText.setText("Scheduled for: " + formatted);
+                            cancelScheduleButton.setVisibility(View.VISIBLE);
                         },
                         calendar.get(Calendar.HOUR_OF_DAY),
                         calendar.get(Calendar.MINUTE),
@@ -154,6 +185,6 @@ public class RoomPickerFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null; // avoid memory leaks
+        _views = null; // avoid memory leaks
     }
 }

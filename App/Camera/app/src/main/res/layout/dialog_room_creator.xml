@@ -32,7 +32,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.25"
+            android:layout_weight="0.75"
             android:gravity="start"
             android:orientation="horizontal">
 
@@ -49,13 +49,33 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"/>
 
+            <ImageButton
+                android:id="@+id/dialogCancelScheduledTimeButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/close"
+                android:backgroundTint="#FF1111"
+
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/dialogShowScheduledMeetingTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="scheduled to:"
+                android:textSize="10sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintWidth_min="0dp" />
+
 
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.75"
+            android:layout_weight="0.25"
             android:gravity="end"
             android:orientation="horizontal">
 
