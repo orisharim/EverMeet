@@ -2,9 +2,12 @@ package com.example.camera.activities;
 
 
 import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
@@ -12,7 +15,9 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 
+import com.example.camera.R;
 import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityLoginBinding;
 import com.example.camera.managers.DatabaseManager;
@@ -52,6 +57,13 @@ public class LoginActivity extends AppCompatActivity {
 
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, String.valueOf(10))
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setContentTitle("0mer")
+                .setContentText("omeromer")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        
 
         _views.switchToSignup.setOnClickListener(v -> {
             _views.loginCard.setVisibility(View.GONE);

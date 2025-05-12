@@ -1,8 +1,12 @@
 package com.example.camera.fragments;
 
+import android.annotation.SuppressLint;
+import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -26,6 +30,7 @@ import com.example.camera.databinding.FragmentRoomPickerBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
+import com.example.camera.receivers.RoomSchedulerReceiver;
 import com.example.camera.utils.NetworkingUtils;
 
 import java.text.SimpleDateFormat;
@@ -59,6 +64,7 @@ public class RoomPickerFragment extends Fragment {
         DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
     }
 
+    @SuppressLint("ScheduleExactAlarm")
     private void showCreateRoomDialog(View view) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("Create room");
@@ -88,7 +94,31 @@ public class RoomPickerFragment extends Fragment {
                                     new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                                             .format(scheduledTime[0].getTime()),
                             Toast.LENGTH_LONG).show();
-                    // TODO: Implement room scheduling logic if needed
+
+                    String roomNameFinal = roomName;
+                    long triggerTime = scheduledTime[0].getTimeInMillis();
+
+                    Intent alarmIntent = new Intent(requireContext(), RoomSchedulerReceiver.class);
+                    alarmIntent.putExtra("room_name", roomNameFinal);
+                    alarmIntent.putExtra("username", User.getConnectedUser().getUsername());
+
+                    PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                            requireContext(),
+                            roomNameFinal.hashCode(),  // Unique requestCode
+                            alarmIntent,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                    );
+
+                    AlarmManager alarmManager = (AlarmManager) requireContext().getSystemService(Context.ALARM_SERVICE);
+                    if (alarmManager != null) {
+                        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTime, pendingIntent);
+                        Toast.makeText(requireContext(), "Room scheduled at: " +
+                                        new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(triggerTime),
+                                Toast.LENGTH_LONG).show();
+                    }
+
+
+
                 } else {
                     // No scheduled time – create immediately
                     createRoom(roomName);
@@ -110,7 +140,7 @@ public class RoomPickerFragment extends Fragment {
             cancelScheduleButton.setVisibility(View.GONE);
         });
 
-        cancelScheduleButton.setVisibility(View.GONE); // Hide cancel button initially
+        cancelScheduleButton.setVisibility(View.GONE);
         scheduledTimeText.setText("No scheduled time");
 
         dialog.show();
