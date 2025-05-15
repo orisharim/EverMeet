@@ -32,7 +32,11 @@ import java.util.Enumeration;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
-    private static final String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
+    private static final String[] PERMS = {Manifest.permission.CAMERA,
+                                           Manifest.permission.RECORD_AUDIO,
+                                           Manifest.permission.INTERNET,
+                                           Manifest.permission.POST_NOTIFICATIONS,
+                                           Manifest.permission.FOREGROUND_SERVICE};
     private static final int MAX_USERNAME_LENGTH = 8;
     private static final int MAX_PASSWORD_LENGTH = 8;
 
