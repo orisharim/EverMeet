@@ -11,6 +11,7 @@ import android.os.Build;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.example.camera.R;
 import com.example.camera.activities.CallActivity;
@@ -32,7 +33,7 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
         if (ACTION_ACCEPT.equals(action)) {
             handleAcceptAction(context, intent);
         } else if (ACTION_DECLINE.equals(action)) {
-            handleDeclineAction(context);
+            deleteNotification(context);
         } else {
             showRoomNotification(context, intent);
         }
@@ -46,14 +47,12 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
         DatabaseManager.getInstance().addRoom(roomName, username, new DatabaseManager.OnRoomAdded() {
             @Override
             public void onSuccess(Room room) {
-
-                // Check if user exists
                 DatabaseManager.getInstance().doesUsernameExist(username, usernameResult -> {
                     if (usernameResult) {
-                        // Check password
                         DatabaseManager.getInstance().checkPassword(username, password, passwordResult -> {
                             if (passwordResult) {
-                                addUser(context, username, password, () -> continueRoomJoin(context, room));
+                                addUser(context, username, password, () -> connectToRoom(context, room));
+                                deleteNotification(context);
                             } else {
                                 Toast.makeText(context, "Wrong password", Toast.LENGTH_SHORT).show();
                             }
@@ -71,7 +70,7 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
         });
     }
 
-    private void continueRoomJoin(Context context, Room room) {
+    private void connectToRoom(Context context, Room room) {
         Room.connectToRoom(room);
 
         DatabaseManager.getInstance().addUserToRoom(
@@ -101,7 +100,7 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
         });
     }
 
-    private void handleDeclineAction(Context context) {
+    private void deleteNotification(Context context){
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.cancelAll();
@@ -149,7 +148,9 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
             return new Notification.Builder(context, CHANNEL_ID)
                     .setContentTitle(title)
                     .setContentText(content)
-                    .setSmallIcon(R.drawable.calendar)
+                    .setSmallIcon(R.drawable.cam)
+                    .setColor(ContextCompat.getColor(context, R.color.colored_background))
+
                     .addAction(R.drawable.add, "Accept", acceptIntent)
                     .addAction(R.drawable.close, "Decline", declineIntent)
                     .setAutoCancel(true)
@@ -158,7 +159,8 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
             return new NotificationCompat.Builder(context, CHANNEL_ID)
                     .setContentTitle(title)
                     .setContentText(content)
-                    .setSmallIcon(R.drawable.calendar)
+                    .setSmallIcon(R.drawable.cam)
+                    .setColor(ContextCompat.getColor(context, R.color.colored_background))
                     .addAction(R.drawable.add, "Accept", acceptIntent)
                     .addAction(R.drawable.close, "Decline", declineIntent)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)

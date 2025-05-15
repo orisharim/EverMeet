@@ -140,8 +140,12 @@ public class RoomPickerFragment extends Fragment {
                               ImageButton cancelScheduleButton) {
         Calendar now = Calendar.getInstance();
 
-        new DatePickerDialog(requireContext(),
-                (view, year, month, dayOfMonth) -> new TimePickerDialog(requireContext(),
+        new DatePickerDialog(
+                requireContext(),
+                R.style.TimePickerDialogTheme,
+                (view, year, month, dayOfMonth) -> new TimePickerDialog(
+                        requireContext(),
+                        R.style.TimePickerDialogTheme,
                         (timeView, hourOfDay, minute) -> {
                             Calendar selected = Calendar.getInstance();
                             selected.set(year, month, dayOfMonth, hourOfDay, minute);

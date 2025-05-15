@@ -49,10 +49,7 @@
         <receiver android:name=".receivers.RoomSchedulerReceiver"
              />
 
-        <service android:name=".receivers.RoomStartupService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"
-            />
+
 
     </application>
 
