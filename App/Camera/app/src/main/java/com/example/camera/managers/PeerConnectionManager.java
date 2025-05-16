@@ -377,7 +377,7 @@ public class PeerConnectionManager {
                 packetBuffer.putInt(totalPackets);
                 packetBuffer.put(payload);
 
-                sendWithRetries(socket, packetBuffer.array(), receiverIp);
+                sendAndRetry(socket, packetBuffer.array(), receiverIp);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error sending packets", e);
@@ -385,7 +385,7 @@ public class PeerConnectionManager {
         }
     }
 
-    private void sendWithRetries(DatagramSocket socket, byte[] packetData, String receiverIp) throws Exception {
+    private void sendAndRetry(DatagramSocket socket, byte[] packetData, String receiverIp) throws Exception {
         Exception lastException = null;
 
         for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
