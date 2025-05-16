@@ -14,7 +14,7 @@ public class Room {
     private String _creator;
     private Map<String, String> _participants;
 
-    // Required empty constructor for Firebase
+    // for Firebase
     public Room() {
         _participants = new HashMap<>();
     }

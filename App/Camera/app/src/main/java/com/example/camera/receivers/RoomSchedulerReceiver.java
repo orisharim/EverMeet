@@ -142,7 +142,7 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
 
     private Notification buildNotification(Context context, String roomName, PendingIntent acceptIntent, PendingIntent declineIntent) {
         String title = "Scheduled Room";
-        String content = "Join room: \"" + roomName + "\"?";
+        String content = "You scheduled the room: \"" + roomName + "\" ";
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             return new Notification.Builder(context, CHANNEL_ID)
@@ -150,7 +150,6 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
                     .setContentText(content)
                     .setSmallIcon(R.drawable.cam)
                     .setColor(ContextCompat.getColor(context, R.color.colored_background))
-
                     .addAction(R.drawable.add, "Accept", acceptIntent)
                     .addAction(R.drawable.close, "Decline", declineIntent)
                     .setAutoCancel(true)
