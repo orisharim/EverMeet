@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.camera.R;
 import com.example.camera.adapters.CamerasAdapter;
+import com.example.camera.classes.Networking.PacketType;
 import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.PeerConnectionManager;
 import com.example.camera.classes.Camera;
@@ -104,11 +105,11 @@ public class CallActivity extends AppCompatActivity {
 
         _views.leaveButton.setOnClickListener(view -> leaveCall());
 
-        PeerConnectionManager.getInstance().setOnCompleteDataReceived(data -> {
+        PeerConnectionManager.getInstance().setOnCompleteDataReceived(completeData -> {
             runOnUiThread(() -> {
                 _camerasAdapter.updateParticipantFrame(
-                        data.getUsername(),
-                        ImageConversionUtils.byteArrayToBitmap(data.getPayload())
+                        completeData.getUsername(),
+                        ImageConversionUtils.byteArrayToBitmap(completeData.getData())
                 );
             });
         });
@@ -142,7 +143,7 @@ public class CallActivity extends AppCompatActivity {
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onLocalCamFrameReceive(ImageProxy frame) {
         byte[] frameData = ImageConversionUtils.bitmapToByteArray(ImageConversionUtils.imageToBitmap(frame.getImage()));
-        PeerConnectionManager.getInstance().setDataSupplier(() -> frameData);
+        PeerConnectionManager.getInstance().setDataSupplier(PacketType.VIDEO, () -> frameData);
     }
 
     @Override
