@@ -16,6 +16,7 @@ import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityHomeBinding;
 import com.example.camera.fragments.FriendsFragment;
 import com.example.camera.fragments.RoomPickerFragment;
+import com.example.camera.utils.StorageUtils;
 
 public class HomeActivity extends AppCompatActivity {
     private static final String TAG = "HomeActivity";
@@ -42,7 +43,9 @@ public class HomeActivity extends AppCompatActivity {
         _views.friendsFragmentButton.setOnClickListener(v -> {setFragment(new FriendsFragment());});
         _views.logoutButton.setOnClickListener(view -> {
             User.setConnectedUser(null);
-            startActivity(new Intent(this, LoginActivity.class));
+            Intent inte = new Intent(this, LoginActivity.class);
+            StorageUtils.removeUserFromStorage(this);
+            startActivity(inte);
         });
     }
 

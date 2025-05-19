@@ -25,8 +25,6 @@ import com.example.camera.classes.User;
 public class FriendsFragment extends Fragment {
     private static final String TAG = "FriendsFragment";
     private FragmentFriendsBinding _views;
-    private FriendRequestAdapter requestAdapter;
-    private FriendsAdapter friendsAdapter;
 
     @Nullable
     @Override
@@ -39,11 +37,11 @@ public class FriendsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        requestAdapter = new FriendRequestAdapter();
+        FriendRequestAdapter requestAdapter = new FriendRequestAdapter();
         _views.friendRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         _views.friendRequestsRecyclerView.setAdapter(requestAdapter);
 
-        friendsAdapter = new FriendsAdapter();
+        FriendsAdapter friendsAdapter = new FriendsAdapter();
         _views.friendsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         _views.friendsRecyclerView.setAdapter(friendsAdapter);
 

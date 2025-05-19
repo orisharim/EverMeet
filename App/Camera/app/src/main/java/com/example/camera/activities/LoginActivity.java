@@ -6,6 +6,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,6 +24,7 @@ import com.example.camera.databinding.ActivityLoginBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.utils.NetworkingUtils;
 import com.example.camera.utils.PermissionsUtils;
+import com.example.camera.utils.StorageUtils;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -57,16 +59,27 @@ public class LoginActivity extends AppCompatActivity {
 
         if(!PermissionsUtils.hasPermissions(PERMS, this)){
             PermissionsUtils.requestPermissions(PERMS, 1000, this);
+        } else{
+            String username = StorageUtils.getLoggedInUsernameFromStorage(this);
+            if(!username.isEmpty()){
+                String password = StorageUtils.getLoggedInPasswordFromStorage(this);
+                DatabaseManager.getInstance().doesUsernameExist(username, usernameResult -> {
+                    if(usernameResult) {
+                        DatabaseManager.getInstance().checkPassword(username, password, passwordResult -> {
+                            if(passwordResult){
+                                addUser(username, password);
+                            } else {
+                            }
+                        });
+                    } else{
+                    }
+                });
+            }
         }
 
         // lock orientation
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, String.valueOf(10))
-                .setSmallIcon(R.drawable.ic_launcher_background)
-                .setContentTitle("0mer")
-                .setContentText("omeromer")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
         
 
         _views.switchToSignup.setOnClickListener(v -> {
@@ -189,6 +202,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onSuccess(User user) {
                 User.setConnectedUser(user);
+                StorageUtils.saveUserInStorage(thisActivity, user.getUsername(), password);
                 startActivity(new Intent(thisActivity, HomeActivity.class));
             }
 

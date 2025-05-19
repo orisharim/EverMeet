@@ -33,29 +33,29 @@ public class RoomPickerFragment extends Fragment {
     private static final SimpleDateFormat DATE_FORMAT =
             new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
-    private FragmentRoomPickerBinding binding;
-    private RoomAdapter roomAdapter;
+    private FragmentRoomPickerBinding _views;
+
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentRoomPickerBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        _views = FragmentRoomPickerBinding.inflate(inflater, container, false);
+        return _views.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        initRecyclerView();
-        binding.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
-        DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
-    }
 
-    private void initRecyclerView() {
-        roomAdapter = new RoomAdapter(this::joinRoom);
-        binding.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.roomsRecyclerView.setAdapter(roomAdapter);
+        RoomAdapter roomAdapter = new RoomAdapter(this::joinRoom);
+        _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        _views.roomsRecyclerView.setAdapter(roomAdapter);
+
+        _views.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
+        _views.helloUsernameText.setText("Hello, "+ User.getConnectedUser().getUsername());
+        DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
+
     }
 
     @SuppressLint("ScheduleExactAlarm")
@@ -174,7 +174,7 @@ public class RoomPickerFragment extends Fragment {
                                 User.getConnectedUser(),
                                 NetworkingUtils.getIPv6Address(),
                                 room,
-                                success -> moveToCallActivity()
+                                success -> startActivity(new Intent(getActivity(), CallActivity.class))
                         );
                     }
 
@@ -192,18 +192,13 @@ public class RoomPickerFragment extends Fragment {
                 room,
                 success -> {
                     Room.connectToRoom(room);
-                    moveToCallActivity();
+                    startActivity(new Intent(getActivity(), CallActivity.class));
                 });
-    }
-
-    private void moveToCallActivity() {
-        Intent intent = new Intent(getActivity(), CallActivity.class);
-        startActivity(intent);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        _views = null;
     }
 }
