@@ -24,7 +24,9 @@ import com.example.camera.receivers.RoomSchedulerReceiver;
 import com.example.camera.utils.NetworkingUtils;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 public class RoomPickerFragment extends Fragment {
@@ -34,7 +36,7 @@ public class RoomPickerFragment extends Fragment {
             new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
 
     private FragmentRoomPickerBinding _views;
-
+    private RoomAdapter _roomAdapter;
 
     @Nullable
     @Override
@@ -48,14 +50,16 @@ public class RoomPickerFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        RoomAdapter roomAdapter = new RoomAdapter(this::joinRoom);
+        _roomAdapter = new RoomAdapter(this::joinRoom);
         _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        _views.roomsRecyclerView.setAdapter(roomAdapter);
+        _views.roomsRecyclerView.setAdapter(_roomAdapter);
 
         _views.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
-        _views.helloUsernameText.setText("Hello, "+ User.getConnectedUser().getUsername());
-        DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
+        _views.helloUsernameText.setText("Hello, " + User.getConnectedUser().getUsername());
 
+
+        DatabaseManager.getInstance().getRoomsData(this::updateRoomsUI);
+        DatabaseManager.getInstance().setOnRoomsDataChange(this::updateRoomsUI);
     }
 
     @SuppressLint("ScheduleExactAlarm")
@@ -136,32 +140,41 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void pickDateTime(Calendar[] scheduledTime,
-                              TextView scheduledTimeText,
-                              ImageButton cancelScheduleButton) {
+                              TextView timeText,
+                              ImageButton cancelButton) {
         Calendar now = Calendar.getInstance();
 
-        new DatePickerDialog(
-                requireContext(),
+        DatePickerDialog datePickerDialog = new DatePickerDialog(requireContext(),
                 R.style.TimePickerDialogTheme,
-                (view, year, month, dayOfMonth) -> new TimePickerDialog(
-                        requireContext(),
-                        R.style.TimePickerDialogTheme,
-                        (timeView, hourOfDay, minute) -> {
-                            Calendar selected = Calendar.getInstance();
-                            selected.set(year, month, dayOfMonth, hourOfDay, minute);
-                            scheduledTime[0] = selected;
+                (view, year, month, dayOfMonth) -> {
 
-                            scheduledTimeText.setText("Scheduled for: " + DATE_FORMAT.format(selected.getTime()));
-                            cancelScheduleButton.setVisibility(View.VISIBLE);
-                        },
-                        now.get(Calendar.HOUR_OF_DAY),
-                        now.get(Calendar.MINUTE),
-                        true
-                ).show(),
+                    TimePickerDialog timePickerDialog = new TimePickerDialog(requireContext(),
+                            R.style.TimePickerDialogTheme,
+                            (timeView, hourOfDay, minute) -> {
+
+                                Calendar selected = Calendar.getInstance();
+                                selected.set(year, month, dayOfMonth, hourOfDay, minute, 0);
+                                selected.set(Calendar.MILLISECOND, 0);
+
+
+                                scheduledTime[0] = selected;
+                                timeText.setText("Scheduled for: " + DATE_FORMAT.format(selected.getTime()));
+                                cancelButton.setVisibility(View.VISIBLE);
+                                
+                            },
+                            now.get(Calendar.HOUR_OF_DAY),
+                            now.get(Calendar.MINUTE),
+                            true);
+
+
+                    timePickerDialog.show();
+                },
                 now.get(Calendar.YEAR),
                 now.get(Calendar.MONTH),
-                now.get(Calendar.DAY_OF_MONTH)
-        ).show();
+                now.get(Calendar.DAY_OF_MONTH));
+
+        datePickerDialog.getDatePicker().setMinDate(System.currentTimeMillis());
+        datePickerDialog.show();
     }
 
     private void createRoom(String roomName) {
@@ -195,6 +208,20 @@ public class RoomPickerFragment extends Fragment {
                     startActivity(new Intent(getActivity(), CallActivity.class));
                 });
     }
+
+    private void updateRoomsUI(List<Room> rooms){
+        List<Room> filteredRooms = new ArrayList<>();
+        rooms.forEach(
+                room -> {
+                    if(User.getConnectedUser().getFriends().contains(room.getCreator())){
+                        filteredRooms.add(room);
+                    }
+                }
+        );
+
+        _roomAdapter.setRooms(filteredRooms);
+    }
+
 
     @Override
     public void onDestroyView() {

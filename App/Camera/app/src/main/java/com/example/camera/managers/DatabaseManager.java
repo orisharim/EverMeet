@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 public class DatabaseManager {
     private static final String TAG = "DatabaseManager";
-    private static DatabaseManager INSTANCE = new DatabaseManager();
+    private static DatabaseManager _instance = new DatabaseManager();
 
     private DatabaseReference _db;
 
@@ -26,7 +26,7 @@ public class DatabaseManager {
     }
 
     public static DatabaseManager getInstance() {
-        return INSTANCE;
+        return _instance;
     }
 
     public void doesUsernameExist(String username, Consumer<Boolean> onResult) {
@@ -67,24 +67,29 @@ public class DatabaseManager {
     }
 
     public void addUser(String username, String password, OnUserAdded onUserAdded) {
-        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                 User newUser = new User(username, password, new LinkedList<>());
-                 _db.child("users").child(username).setValue(newUser)
-                     .addOnCompleteListener(task -> {
-                         if (task.isSuccessful()) {
-                             onUserAdded.onSuccess(newUser);
-                         } else {
-                             onUserAdded.onFail();
-                         }
-                     });
-            }
+        doesUsernameExist(username, aBoolean -> {
+            if(!aBoolean){
+                _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        User newUser = new User(username, password, new LinkedList<>());
+                        _db.child("users").child(username).setValue(newUser)
+                                .addOnCompleteListener(task -> {
+                                    if (task.isSuccessful()) {
+                                        onUserAdded.onSuccess(newUser);
+                                    } else {
+                                        onUserAdded.onFail();
+                                    }
+                                });
+                    }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                onUserAdded.onFail();
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        onUserAdded.onFail();
+                    }
+                });
             }
         });
+
     }
 
     public interface OnRoomAdded {
@@ -156,6 +161,28 @@ public class DatabaseManager {
 
     private String generateRoomId() {
         return _db.child("rooms").push().getKey();
+    }
+
+    public void getRoomsData(Consumer<List<Room>> onRoomsReceived){
+        _db.child("rooms").addListenerForSingleValueEvent(new ValueEventListener() {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<Room> rooms = new ArrayList<>();
+                for (DataSnapshot roomSnapshot : snapshot.getChildren()) {
+                    Room room = roomSnapshot.getValue(Room.class);
+                    if (room != null) {
+                        room.setId(roomSnapshot.getKey());
+                        rooms.add(room);
+                    }
+                }
+
+                onRoomsReceived.accept(rooms);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onRoomsReceived.accept(null);
+            }
+        });
     }
 
     public void setOnRoomsDataChange(Consumer<List<Room>> onRoomsChange) {
@@ -367,6 +394,7 @@ public class DatabaseManager {
             }
         });
     }
+
 
 
 }
