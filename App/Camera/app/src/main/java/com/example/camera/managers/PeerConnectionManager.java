@@ -25,12 +25,12 @@ import java.util.function.Supplier;
 
 public class PeerConnectionManager {
     private static final String TAG = "PeerConnectionManager";
-    private static final int PACKET_SIZE = 1400;
+    private static final int PACKET_SIZE = 40000;
     private static final int PORT = 12345;
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 2;
     private static final int CLEANUP_MS = 15000;
-    private static final int MAX_QUEUE_SIZE = 500;
+    private static final int MAX_QUEUE_SIZE = 1000;
     private static final int RECEIVE_SOCKET_TIMEOUT_MS = 500;
 
     private static final PeerConnectionManager INSTANCE = new PeerConnectionManager();
@@ -217,7 +217,7 @@ public class PeerConnectionManager {
                 // Store in atomic reference for safe access from other threads
                 _receiveSocketRef.set(receiveSocket);
 
-                byte[] buffer = new byte[PACKET_SIZE * 2];
+                byte[] buffer = new byte[PACKET_SIZE * 10];
 
                 while (_isRunning.get() && !Thread.currentThread().isInterrupted()) {
                     try {

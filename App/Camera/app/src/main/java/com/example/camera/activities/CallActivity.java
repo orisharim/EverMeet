@@ -90,7 +90,7 @@ public class CallActivity extends AppCompatActivity {
 
     private void setupRoomListener() {
         String roomId = Room.getConnectedRoom().getId();
-        DatabaseManager.getInstance().setOnRoomDataChange(roomId, room -> {
+        DatabaseManager.getInstance().setOnRoomDataReceived(roomId, room -> {
             if (room == null) {
                 Toast.makeText(this, "Room closed", Toast.LENGTH_SHORT).show();
                 leaveCall();
@@ -182,7 +182,7 @@ public class CallActivity extends AppCompatActivity {
     private void leaveCall() {
         PeerConnectionManager.getInstance().shutdown();
         _localCam.stopCamera();
-        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {});
+        DatabaseManager.getInstance().setOnRoomDataReceived(Room.getConnectedRoom().getId(), room -> {});
         DatabaseManager.getInstance().removeUserFromRoom(
                 User.getConnectedUser(),
                 Room.getConnectedRoom(),

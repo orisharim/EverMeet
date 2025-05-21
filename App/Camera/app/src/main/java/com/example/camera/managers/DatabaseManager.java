@@ -66,7 +66,7 @@ public class DatabaseManager {
         void onFail();
     }
 
-    public void addUser(String username, String password, OnUserAdded onUserAdded) {
+    public void addNewUser(String username, String password, OnUserAdded onUserAdded) {
         doesUsernameExist(username, aBoolean -> {
             if(!aBoolean){
                 _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
@@ -91,6 +91,48 @@ public class DatabaseManager {
         });
 
     }
+
+    public interface OnUserLoaded {
+        void onSuccess(User user);
+        void onFail();
+    }
+
+    public void getUser(String username, OnUserLoaded onUserLoaded) {
+        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user != null) {
+                    onUserLoaded.onSuccess(user);
+                } else {
+                    onUserLoaded.onFail();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                onUserLoaded.onFail();
+            }
+        });
+    }
+
+    public void setOnUserDataReceived(String username, Consumer<User> onFriendsDataReceived) {
+        _db.child("users").child(username).addListenerForSingleValueEvent(new ValueEventListener() {
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    User existingUser = snapshot.getValue(User.class);
+                    onFriendsDataReceived.accept(existingUser);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+    }
+
+
 
     public interface OnRoomAdded {
         void onSuccess(Room room);
@@ -185,7 +227,7 @@ public class DatabaseManager {
         });
     }
 
-    public void setOnRoomsDataChange(Consumer<List<Room>> onRoomsChange) {
+    public void setOnRoomsDataReceived(Consumer<List<Room>> onRoomsChange) {
         _db.child("rooms").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -207,7 +249,7 @@ public class DatabaseManager {
         });
     }
 
-    public void setOnRoomDataChange(String roomId, Consumer<Room> onRoomChange) {
+    public void setOnRoomDataReceived(String roomId, Consumer<Room> onRoomChange) {
         _db.child("rooms").child(roomId).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {

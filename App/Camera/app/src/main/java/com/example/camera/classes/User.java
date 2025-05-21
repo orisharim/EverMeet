@@ -1,5 +1,7 @@
 package com.example.camera.classes;
 
+import com.example.camera.managers.DatabaseManager;
+
 import java.util.List;
 
 public class User {
@@ -54,8 +56,14 @@ public class User {
         return _connectedUser;
     }
 
-    public static void setConnectedUser(User user){
+    public static void connectToUser(User user){
         _connectedUser = user;
+        if(user != null)
+            DatabaseManager.getInstance().setOnUserDataReceived(user.getUsername(), User::connectToUser);
+    }
+
+    public static void disconnectFromConncetedUser() {
+        _connectedUser = null;
     }
 
     public static boolean isUserConnected(){

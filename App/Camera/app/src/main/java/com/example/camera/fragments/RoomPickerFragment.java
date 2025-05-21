@@ -59,7 +59,7 @@ public class RoomPickerFragment extends Fragment {
 
 
         DatabaseManager.getInstance().getRoomsData(this::updateRoomsUI);
-        DatabaseManager.getInstance().setOnRoomsDataChange(this::updateRoomsUI);
+        DatabaseManager.getInstance().setOnRoomsDataReceived(this::updateRoomsUI);
     }
 
     @SuppressLint("ScheduleExactAlarm")
@@ -210,6 +210,11 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void updateRoomsUI(List<Room> rooms){
+        if(User.getConnectedUser().getFriends() == null){
+            _roomAdapter.setRooms(new ArrayList<Room>());
+            return;
+        }
+
         List<Room> filteredRooms = new ArrayList<>();
         rooms.forEach(
                 room -> {

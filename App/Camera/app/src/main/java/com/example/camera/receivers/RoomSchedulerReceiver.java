@@ -86,10 +86,10 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
     }
 
     private void addUser(Context context, String username, String password, Runnable onSuccess) {
-        DatabaseManager.getInstance().addUser(username, password, new DatabaseManager.OnUserAdded() {
+        DatabaseManager.getInstance().addNewUser(username, password, new DatabaseManager.OnUserAdded() {
             @Override
             public void onSuccess(User user) {
-                User.setConnectedUser(user);
+                User.connectToUser(user);
                 onSuccess.run();
             }
 

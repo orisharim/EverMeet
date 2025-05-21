@@ -40,8 +40,8 @@ public class HomeActivity extends AppCompatActivity {
         );
 
         _views.logoutButton.setOnClickListener(v -> {
-            User.setConnectedUser(null);
             StorageUtils.removeUserFromStorage(this);
+            User.disconnectFromConncetedUser();
             Intent loginIntent = new Intent(this, LoginActivity.class);
             startActivity(loginIntent);
         });

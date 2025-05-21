@@ -1,9 +1,11 @@
 package com.example.camera.activities;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -12,11 +14,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityLoginBinding;
 import com.example.camera.managers.DatabaseManager;
+import com.example.camera.utils.NetworkingUtils;
 import com.example.camera.utils.PermissionsUtils;
 import com.example.camera.utils.StorageUtils;
 
 public class LoginActivity extends AppCompatActivity {
 
+
+    private static final String TAG = "LoginActivity";
     private static final String[] PERMISSIONS = {
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
@@ -43,7 +48,8 @@ public class LoginActivity extends AppCompatActivity {
 
         if (!PermissionsUtils.hasPermissions(PERMISSIONS, this)) {
             PermissionsUtils.requestPermissions(PERMISSIONS, 1000, this);
-        } else {
+        }
+        else {
             attemptAutoLogin();
         }
 
@@ -68,7 +74,7 @@ public class LoginActivity extends AppCompatActivity {
                 if (exists) {
                     DatabaseManager.getInstance().checkPassword(savedUsername, savedPassword, correct -> {
                         if (correct) {
-                            addUser(savedUsername, savedPassword);
+                            loadUser(savedUsername, savedPassword);
                         }
                     });
                 }
@@ -92,9 +98,11 @@ public class LoginActivity extends AppCompatActivity {
 
     private void setupLoginButton() {
         _views.loginButton.setOnClickListener(v -> {
+
             String username = _views.loginUsername.getText().toString().trim();
             String password = _views.loginPassword.getText().toString();
 
+            if(!checkInternetConnection()) return;
             if (!validateUsernameAndPassword(username, password)) return;
             if (!checkPermissionsGranted()) return;
 
@@ -102,7 +110,7 @@ public class LoginActivity extends AppCompatActivity {
                 if (exists) {
                     DatabaseManager.getInstance().checkPassword(username, password, correct -> {
                         if (correct) {
-                            addUser(username, password);
+                            loadUser(username, password);
                         } else {
                             Toast.makeText(this, "Wrong password", Toast.LENGTH_SHORT).show();
                         }
@@ -120,18 +128,15 @@ public class LoginActivity extends AppCompatActivity {
             String password = _views.signupPassword.getText().toString();
             String confirmPassword = _views.signupConfirmPassword.getText().toString();
 
+            if(!checkInternetConnection()) return;
             if (!validateUsernameAndPassword(username, password)) return;
-
-            if (!password.equals(confirmPassword)) {
-                Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
+            if (!password.equals(confirmPassword)) return;
             if (!checkPermissionsGranted()) return;
+
 
             DatabaseManager.getInstance().doesUsernameExist(username, exists -> {
                 if (!exists) {
-                    new Thread(() -> addUser(username, password)).start();
+                    new Thread(() -> loadUser(username, password)).start();
                 } else {
                     Toast.makeText(this, "A user named " + username + " already exists", Toast.LENGTH_SHORT).show();
                 }
@@ -175,19 +180,51 @@ public class LoginActivity extends AppCompatActivity {
         return true;
     }
 
-    private void addUser(String username, String password) {
-        DatabaseManager.getInstance().addUser(username, password, new DatabaseManager.OnUserAdded() {
-            @Override
-            public void onSuccess(User user) {
-                User.setConnectedUser(user);
-                StorageUtils.saveUserInStorage(LoginActivity.this, username, password);
-                startActivity(new Intent(LoginActivity.this, HomeActivity.class));
-            }
+    private boolean checkInternetConnection(){
+        if(!NetworkingUtils.isConnectedToInternet(this)){
+            Toast.makeText(this, "No internet connection", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
 
-            @Override
-            public void onFail() {
-                Toast.makeText(LoginActivity.this, "Login failed", Toast.LENGTH_SHORT).show();
+    }
+
+    private void loadUser(String username, String password) {
+        Context thisActivity = this;
+        DatabaseManager.getInstance().doesUsernameExist(username, exists -> {
+            if (exists) {
+                DatabaseManager.getInstance().getUser(username, new DatabaseManager.OnUserLoaded() {
+                    @Override
+                    public void onSuccess(User user) {
+                       enter(user);
+                    }
+
+                    @Override
+                    public void onFail() {
+                        Toast.makeText(thisActivity, "Login failed", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                DatabaseManager.getInstance().addNewUser(username, password, new DatabaseManager.OnUserAdded() {
+                    @Override
+                    public void onSuccess(User user) {
+                        enter(user);
+                    }
+
+                    @Override
+                    public void onFail() {
+                        Toast.makeText(thisActivity, "Login failed", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
+
+    private void enter(User user){
+        Log.e(TAG, "logging in");
+        User.connectToUser(user);
+        StorageUtils.saveUserInStorage(this, user.getUsername(), user.getPassword());
+        startActivity(new Intent(this, HomeActivity.class));
+    }
+
 }
