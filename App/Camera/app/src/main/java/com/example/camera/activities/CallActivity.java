@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.view.MotionEvent;
@@ -169,10 +170,18 @@ public class CallActivity extends AppCompatActivity {
 
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onLocalCamFrameReceive(ImageProxy frame) {
-        byte[] frameData = ImageConversionUtils.bitmapToByteArray(
-                ImageConversionUtils.imageToBitmap(frame.getImage())
-        );
-        PeerConnectionManager.getInstance().setDataSupplier(PacketType.VIDEO, () -> frameData);
+        byte[] frameData;
+//        if(!_isCamClosed) {
+            frameData = ImageConversionUtils.bitmapToByteArray(
+                    ImageConversionUtils.imageToBitmap(frame.getImage())
+            );
+//        }
+//        else{
+//            frameData = ImageConversionUtils.drawableToByteArray(Drawable.createFromPath("res/drawable/cam_off_in_call.xml"));
+//        }
+
+            PeerConnectionManager.getInstance().setDataSupplier(PacketType.VIDEO, () -> frameData);
+
     }
 
     @Override

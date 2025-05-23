@@ -10,14 +10,13 @@ import android.graphics.drawable.ColorDrawable;
 import android.widget.Toast;
 
 import com.example.camera.R;
-import com.example.camera.activities.HomeActivity;
 import com.example.camera.utils.NetworkingUtils;
 
 
 
 public class InternetConnectionChangeReceiver extends BroadcastReceiver {
 
-    private static Dialog internetDialog;
+    private static Dialog _internetDialog;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -29,27 +28,27 @@ public class InternetConnectionChangeReceiver extends BroadcastReceiver {
 
             if (!isConnected) {
                 // Show the dialog if it's not already showing
-                if (internetDialog == null || !internetDialog.isShowing()) {
-                    internetDialog = new Dialog(activity);
-                    internetDialog.setContentView(R.layout.dialog_no_internet_connection);
+                if (_internetDialog == null || !_internetDialog.isShowing()) {
+                    _internetDialog = new Dialog(activity);
+                    _internetDialog.setContentView(R.layout.dialog_no_internet_connection);
 
-                    if (internetDialog.getWindow() != null) {
-                        internetDialog.getWindow().setBackgroundDrawable(
+                    if (_internetDialog.getWindow() != null) {
+                        _internetDialog.getWindow().setBackgroundDrawable(
                                 new ColorDrawable(Color.TRANSPARENT)
                         );
                     }
 
-                    internetDialog.setCancelable(false);
-                    internetDialog.show();
+                    _internetDialog.setCancelable(false);
+                    _internetDialog.show();
                 }
 
                 Toast.makeText(context, "Disconnected from the internet", Toast.LENGTH_SHORT).show();
 
             } else {
                 // Dismiss the dialog if it exists and is showing
-                if (internetDialog != null && internetDialog.isShowing()) {
-                    internetDialog.dismiss();
-                    internetDialog = null;
+                if (_internetDialog != null && _internetDialog.isShowing()) {
+                    _internetDialog.dismiss();
+                    _internetDialog = null;
                 }
 
             }

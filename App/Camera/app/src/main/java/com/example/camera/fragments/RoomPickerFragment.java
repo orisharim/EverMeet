@@ -35,6 +35,7 @@ public class RoomPickerFragment extends Fragment {
     private static final String TAG = "RoomPickerFragment";
     private static final SimpleDateFormat DATE_FORMAT =
             new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+    private static final int MAX_ROOM_NAME_LENGTH = 8;
 
     private FragmentRoomPickerBinding _views;
     private RoomAdapter _roomAdapter;
@@ -86,6 +87,10 @@ public class RoomPickerFragment extends Fragment {
             String roomName = roomNameInput.getText().toString().trim();
             if (roomName.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter a room name.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if(roomName.length() > MAX_ROOM_NAME_LENGTH){
+                Toast.makeText(requireContext(), "Room name must be at most " + MAX_ROOM_NAME_LENGTH + " characters", Toast.LENGTH_SHORT).show();
                 return;
             }
 
