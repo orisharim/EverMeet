@@ -1,7 +1,9 @@
 package com.example.camera.activities;
 
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.view.View;
 
@@ -13,6 +15,7 @@ import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityHomeBinding;
 import com.example.camera.fragments.FriendsFragment;
 import com.example.camera.fragments.RoomPickerFragment;
+import com.example.camera.receivers.InternetConnectionChangeReceiver;
 import com.example.camera.utils.StorageUtils;
 
 public class HomeActivity extends AppCompatActivity {
@@ -45,6 +48,8 @@ public class HomeActivity extends AppCompatActivity {
             Intent loginIntent = new Intent(this, LoginActivity.class);
             startActivity(loginIntent);
         });
+
+        registerInternetConnectionChangeRecevier();
     }
 
     private void setFullScreenMode() {
@@ -60,4 +65,11 @@ public class HomeActivity extends AppCompatActivity {
                 .replace(R.id.fragment_container, fragment)
                 .commit();
     }
+
+    private void registerInternetConnectionChangeRecevier(){
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(new InternetConnectionChangeReceiver(), filter);
+    }
+
 }

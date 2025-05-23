@@ -68,21 +68,34 @@ public class FriendsFragment extends Fragment {
 
         sendFriendRequestButton.setOnClickListener(v -> {
             String targetUsername = friendUsernameInput.getText().toString().trim();
-            if (!targetUsername.isEmpty()) {
-                DatabaseManager.getInstance().sendFriendRequest(
-                        User.getConnectedUser().getUsername(),
-                        targetUsername,
-                        success -> {
-                            if (success) {
-                                Toast.makeText(requireContext(), "Friend request sent!", Toast.LENGTH_SHORT).show();
-                            } else {
-                                Toast.makeText(requireContext(), "Failed to send request.", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                dialog.dismiss();
-            } else {
+            if (targetUsername.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter a username.", Toast.LENGTH_SHORT).show();
+                return;
             }
+            else if(User.getConnectedUser().getUsername().equals(targetUsername)){
+                Toast.makeText(requireContext(), "You cannot send a request to yourself", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            DatabaseManager.getInstance().doesUsernameExist(targetUsername, exists -> {
+                if(exists) {
+                    DatabaseManager.getInstance().sendFriendRequest(
+                            User.getConnectedUser().getUsername(),
+                            targetUsername,
+                            success -> {
+                                if (success) {
+                                    Toast.makeText(requireContext(), "Friend request sent!", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(requireContext(), "Failed to send request.", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+
+                    dialog.dismiss(); //close dialog
+                } else{
+                    Toast.makeText(requireContext(), "The user: " + targetUsername + " doesn't exist", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            });
+
         });
 
         cancelButton.setOnClickListener(v -> dialog.dismiss());

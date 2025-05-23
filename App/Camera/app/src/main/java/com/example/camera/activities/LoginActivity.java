@@ -130,7 +130,10 @@ public class LoginActivity extends AppCompatActivity {
 
             if(!checkInternetConnection()) return;
             if (!validateUsernameAndPassword(username, password)) return;
-            if (!password.equals(confirmPassword)) return;
+            if (!password.equals(confirmPassword)) {
+                Toast.makeText(this, "passwords do not match", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (!checkPermissionsGranted()) return;
 
 

@@ -2,8 +2,10 @@ package com.example.camera.activities;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,6 +27,7 @@ import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.managers.PeerConnectionManager;
+import com.example.camera.receivers.InternetConnectionChangeReceiver;
 import com.example.camera.utils.ImageConversionUtils;
 
 import java.util.HashMap;
@@ -62,6 +65,7 @@ public class CallActivity extends AppCompatActivity {
         setupUIListeners();
         setupPeerFrameListener();
         enableLocalCameraDrag();
+        registerInternetConnectionChangeReceiver();
     }
 
     private void setFullScreenMode() {
@@ -189,5 +193,11 @@ public class CallActivity extends AppCompatActivity {
                 success -> {}
         );
         startActivity(new Intent(this, HomeActivity.class));
+    }
+
+    private void registerInternetConnectionChangeReceiver(){
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(new InternetConnectionChangeReceiver(), filter);
     }
 }
