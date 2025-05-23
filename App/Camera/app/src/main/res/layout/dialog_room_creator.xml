@@ -4,10 +4,21 @@
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="@drawable/dialog_background"
+    android:gravity="center"
+    android:elevation="8dp">
 
 
-        <com.google.android.material.textfield.TextInputLayout
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/black"
+        android:text="Create Room: \n"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Enter room name"
@@ -31,10 +42,10 @@
 
         <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="0.75"
             android:gravity="start"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
 
             <ImageButton
@@ -45,9 +56,9 @@
                 android:backgroundTint="@color/colored_background"
 
                 app:layout_constraintDimensionRatio="1:1"
-                app:layout_constraintWidth_min="0dp"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"/>
+                app:layout_constraintWidth_min="0dp" />
 
             <ImageButton
                 android:id="@+id/dialogCancelScheduledTimeButton"
@@ -68,6 +79,8 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintWidth_min="0dp" />
+
+
 
 
         </LinearLayout>

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.*;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
@@ -65,13 +66,12 @@ public class RoomPickerFragment extends Fragment {
     @SuppressLint("ScheduleExactAlarm")
     private void showCreateRoomDialog(View view) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle("Create room");
-
         View dialogView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_room_creator, null);
         builder.setView(dialogView);
 
         AlertDialog dialog = builder.create();
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
         EditText roomNameInput = dialogView.findViewById(R.id.dialogRoomName);
         Button createButton = dialogView.findViewById(R.id.dialogCreateRoomButton);

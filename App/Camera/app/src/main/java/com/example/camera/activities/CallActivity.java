@@ -46,6 +46,7 @@ public class CallActivity extends AppCompatActivity {
     private boolean _isCamClosed;
     private boolean _isMuted;
     private CamerasAdapter _camerasAdapter;
+    private InternetConnectionChangeReceiver _internetConnectionChangeReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +66,10 @@ public class CallActivity extends AppCompatActivity {
         setupUIListeners();
         setupPeerFrameListener();
         enableLocalCameraDrag();
+
+        _internetConnectionChangeReceiver = new InternetConnectionChangeReceiver();
         registerInternetConnectionChangeReceiver();
+
     }
 
     private void setFullScreenMode() {
@@ -198,6 +202,13 @@ public class CallActivity extends AppCompatActivity {
     private void registerInternetConnectionChangeReceiver(){
         IntentFilter filter = new IntentFilter();
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-        registerReceiver(new InternetConnectionChangeReceiver(), filter);
+        registerReceiver(_internetConnectionChangeReceiver, filter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(_internetConnectionChangeReceiver);
     }
 }
+

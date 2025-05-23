@@ -21,7 +21,7 @@ import com.example.camera.utils.StorageUtils;
 public class HomeActivity extends AppCompatActivity {
 
     private ActivityHomeBinding _views;
-
+    private InternetConnectionChangeReceiver _internetConnectionChangeReceiver;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,7 +49,8 @@ public class HomeActivity extends AppCompatActivity {
             startActivity(loginIntent);
         });
 
-        registerInternetConnectionChangeRecevier();
+        _internetConnectionChangeReceiver = new InternetConnectionChangeReceiver();
+        registerInternetConnectionChangeReceiver();
     }
 
     private void setFullScreenMode() {
@@ -66,10 +67,15 @@ public class HomeActivity extends AppCompatActivity {
                 .commit();
     }
 
-    private void registerInternetConnectionChangeRecevier(){
+    private void registerInternetConnectionChangeReceiver(){
         IntentFilter filter = new IntentFilter();
         filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-        registerReceiver(new InternetConnectionChangeReceiver(), filter);
+        registerReceiver(_internetConnectionChangeReceiver, filter);
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(_internetConnectionChangeReceiver);
+    }
 }
