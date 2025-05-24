@@ -1,4 +1,4 @@
-package com.example.camera.classes.Networking;
+package com.example.camera.classes.Networking.RTP;
 
 public enum PacketType {
     VIDEO((byte) 0),

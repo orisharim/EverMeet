@@ -1,6 +1,4 @@
-package com.example.camera.classes.Networking;
-
-import com.example.camera.classes.Networking.PacketType;
+package com.example.camera.classes.Networking.RTP;
 
 public class CompleteData {
     private String _username;

@@ -2,10 +2,10 @@ package com.example.camera.managers;
 
 import android.util.Log;
 
-import com.example.camera.classes.Networking.CompleteData;
-import com.example.camera.classes.Networking.DataPacket;
-import com.example.camera.classes.Networking.FrameIdentifier;
-import com.example.camera.classes.Networking.PacketType;
+import com.example.camera.classes.Networking.RTP.CompleteData;
+import com.example.camera.classes.Networking.RTP.DataPacket;
+import com.example.camera.classes.Networking.RTP.FrameIdentifier;
+import com.example.camera.classes.Networking.RTP.PacketType;
 import com.example.camera.classes.Room;
 import com.example.camera.classes.User;
 
@@ -27,9 +27,9 @@ import java.util.function.Supplier;
 
 public class PeerConnectionManager {
     private static final String TAG = "PeerConnectionManager";
-    private static final int PACKET_SIZE = 2000; // Max size for RTP data packets
+    private static final int PACKET_SIZE = 40000;
     private static final int RTP_PORT = 12345;
-    private static final int RTCP_PORT = 12346; // RTCP typically uses RTP_PORT + 1
+    private static final int RTCP_PORT = 12346;
 
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 2;
@@ -37,11 +37,11 @@ public class PeerConnectionManager {
     private static final int MAX_QUEUE_SIZE = 1000;
     private static final int RECEIVE_SOCKET_TIMEOUT_MS = 500;
 
-    // RTCP specific constants
-    private static final long RTCP_REPORT_INTERVAL_MS = 5000; // Send RTCP reports every 5 seconds
-    private static final long RTCP_BYE_TIMEOUT_MS = 30000; // Timeout for receiving BYE from a peer
 
-    private static final PeerConnectionManager INSTANCE = new PeerConnectionManager();
+    private static final long RTCP_REPORT_INTERVAL_MS = 5000;
+    private static final long RTCP_BYE_TIMEOUT_MS = 30000;
+
+    private static final PeerConnectionManager _instance = new PeerConnectionManager();
 
     private final ConcurrentHashMap<FrameIdentifier, List<DataPacket>> _incompleteFrames = new ConcurrentHashMap<>();
     private final LinkedBlockingQueue<DataPacket> _rtpPacketQueue = new LinkedBlockingQueue<>(MAX_QUEUE_SIZE);
@@ -54,7 +54,6 @@ public class PeerConnectionManager {
 
     private final ConcurrentHashMap<PacketType, Supplier<byte[]>> _dataSuppliers = new ConcurrentHashMap<>();
     private Consumer<CompleteData> _onCompleteDataReceived = data -> {};
-    private Consumer<RtcpPacket> _onRtcpPacketReceived = rtcpPacket -> {}; // New callback for RTCP packets
 
     private final ConcurrentHashMap<String, Connection> _connections = new ConcurrentHashMap<>(); // Changed to ConcurrentHashMap for easier management by username
 
@@ -62,22 +61,21 @@ public class PeerConnectionManager {
     private final AtomicReference<DatagramSocket> _rtcpReceiveSocketRef = new AtomicReference<>(); // New socket ref for RTCP
 
     private Thread _rtpReceiveThread;
-    private Thread _rtcpReceiveThread; // New thread for RTCP reception
+    private Thread _rtcpReceiveThread;
     private Thread _processThread;
     private Thread _cleanupThread;
     private Thread _frameCounterThread;
     private Thread _packetCounterThread;
-    private Thread _rtcpSenderThread; // New thread for sending RTCP reports
+    private Thread _rtcpSenderThread;
 
     private final AtomicBoolean _isRunning = new AtomicBoolean(false);
 
-    // New: RTCP state per peer
     private final ConcurrentHashMap<String, RtcpPeerState> _rtcpPeerStates = new ConcurrentHashMap<>();
 
     private PeerConnectionManager() {}
 
     public static PeerConnectionManager getInstance() {
-        return INSTANCE;
+        return _instance;
     }
 
     public void setDataSupplier(PacketType type, Supplier<byte[]> supplier) {
@@ -88,24 +86,18 @@ public class PeerConnectionManager {
         this._onCompleteDataReceived = callback;
     }
 
-    public void setOnRtcpPacketReceived(Consumer<RtcpPacket> callback) {
-        this._onRtcpPacketReceived = callback;
-    }
-
     public void connectToParticipants() {
         shutdown();
 
         if (_isRunning.compareAndSet(false, true)) {
             startRtpReceiveThread();
-            startRtcpReceiveThread(); // Start RTCP receive thread
+            startRtcpReceiveThread();
             startProcessThread();
             startCleanupThread();
-//            startFrameCounterThread();
-//            startPacketCounterThread();
-            startRtcpSenderThread(); // Start RTCP sender thread
+            startRtcpSenderThread();
 
-            _connections.clear(); // Clear existing connections
-            _rtcpPeerStates.clear(); // Clear existing RTCP peer states
+            _connections.clear();
+            _rtcpPeerStates.clear();
 
             Room room = Room.getConnectedRoom();
             if (room == null) {
@@ -133,22 +125,21 @@ public class PeerConnectionManager {
                 }
             });
 
-            Log.i(TAG, "Successfully connected to " + _connections.size() + " participants");
+            Log.i(TAG, "connected to " + _connections.size() + " participants");
         } else {
-            Log.w(TAG, "Cannot connect - manager is already running");
+            Log.w(TAG, "cannot connect - manager is already running");
         }
     }
 
     public void shutdown() {
-        Log.d(TAG, "Shutting down PeerConnectionManager...");
+        Log.d(TAG, "Shutting down Coms");
 
         if (!_isRunning.compareAndSet(true, false)) {
-            Log.d(TAG, "PeerConnectionManager already shut down or not running");
+            Log.d(TAG, "Coms already shut down or not running");
             cleanupResourcesUnsafe();
             return;
         }
 
-        // Send BYE packets to all connected participants before shutting down
         User connectedUser = User.getConnectedUser();
         if (connectedUser != null) {
             String selfCname = connectedUser.getUsername();
@@ -161,7 +152,6 @@ public class PeerConnectionManager {
             });
         }
 
-        // Stop all send threads first
         _connections.forEach((username, conn) -> {
             Thread sendThread = conn.getSendThread();
             if (sendThread != null && sendThread.isAlive()) {
@@ -170,42 +160,40 @@ public class PeerConnectionManager {
                     sendThread.join(500);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    Log.w(TAG, "Interrupted while waiting for RTP send thread to terminate for " + username);
+                    Log.w(TAG, "got interrupted while waiting for RTP send thread to terminate for " + username);
                 }
             }
-            // Close send socket
+
             if (conn.getSendSocket() != null && !conn.getSendSocket().isClosed()) {
                 conn.getSendSocket().close();
-                Log.d(TAG, "Send socket closed for " + username);
+                Log.d(TAG, "send socket closed for " + username);
             }
         });
         _connections.clear();
 
-        // Close receive sockets - do this safely
+
         DatagramSocket rtpReceiveSocket = _rtpReceiveSocketRef.getAndSet(null);
         if (rtpReceiveSocket != null && !rtpReceiveSocket.isClosed()) {
             rtpReceiveSocket.close();
-            Log.d(TAG, "RTP receive socket closed.");
+            Log.d(TAG, "RTP receive socket closed");
         }
         DatagramSocket rtcpReceiveSocket = _rtcpReceiveSocketRef.getAndSet(null);
         if (rtcpReceiveSocket != null && !rtcpReceiveSocket.isClosed()) {
             rtcpReceiveSocket.close();
-            Log.d(TAG, "RTCP receive socket closed.");
+            Log.d(TAG, "RTCP receive socket closed");
         }
 
-        // Safely terminate all threads
         stopThread(_rtpReceiveThread, "RTP Receive");
-        stopThread(_rtcpReceiveThread, "RTCP Receive"); // Terminate RTCP receive thread
+        stopThread(_rtcpReceiveThread, "RTCP Receive");
         stopThread(_processThread, "Process");
         stopThread(_cleanupThread, "Cleanup");
         stopThread(_frameCounterThread, "FrameCounter");
         stopThread(_packetCounterThread, "PacketCounter");
-        stopThread(_rtcpSenderThread, "RTCP Sender"); // Terminate RTCP sender thread
+        stopThread(_rtcpSenderThread, "RTCP Sender");
 
-        // Clear references and collections
         cleanupResourcesUnsafe();
 
-        Log.d(TAG, "PeerConnectionManager shutdown complete.");
+        Log.d(TAG, "shutdown complete");
     }
 
     private void stopThread(Thread thread, String threadName) {
@@ -218,7 +206,7 @@ public class PeerConnectionManager {
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                Log.w(TAG, "Interrupted while waiting for " + threadName + " thread to terminate");
+                Log.w(TAG, "got interrupted while waiting for " + threadName + " thread to terminate");
             }
         }
     }
@@ -239,16 +227,12 @@ public class PeerConnectionManager {
     }
 
     private Connection createConnection(String username, String ip) {
-        // Now each connection will also manage its own DatagramSocket for sending
-        // This is important because you might send RTP and RTCP to the same destination
-        // but need separate sockets to track different metrics or if different local ports are needed.
-        // For simplicity here, we'll use one socket per connection for both RTP/RTCP sending.
         DatagramSocket sendSocket = null;
         try {
             sendSocket = new DatagramSocket();
             sendSocket.setSendBufferSize(PACKET_SIZE * 10);
         } catch (SocketException e) {
-            Log.e(TAG, "Error creating send socket for " + username + ": " + e.getMessage());
+            Log.e(TAG, "error creating send socket for " + username + ": " + e.getMessage());
             return null;
         }
 
@@ -284,7 +268,6 @@ public class PeerConnectionManager {
                             Log.v(TAG, "RTP Packet queue full, dropped oldest packet");
                         }
                     } catch (SocketTimeoutException ste) {
-                        // Expected timeout, just continue
                     } catch (SocketException se) {
                         if (!_isRunning.get()) {
                             Log.d(TAG, "RTP receive socket closed during shutdown. Exiting receive thread gracefully.");
@@ -297,9 +280,9 @@ public class PeerConnectionManager {
                     }
                 }
             } catch (SocketException se) {
-                Log.e(TAG, "Could not open RTP receive socket on port " + RTP_PORT + ": " + se.getMessage(), se);
+                Log.e(TAG, "could not open RTP receive socket on port " + RTP_PORT + ": " + se.getMessage(), se);
             } catch (Exception e) {
-                Log.e(TAG, "RTP Receive thread fatal error: " + e.getMessage(), e);
+                Log.e(TAG, "RTP Receive thread error: " + e.getMessage(), e);
             } finally {
                 DatagramSocket socketToClose = rtpReceiveSocket != null ? rtpReceiveSocket : _rtpReceiveSocketRef.getAndSet(null);
                 if (socketToClose != null && !socketToClose.isClosed()) {
@@ -309,6 +292,7 @@ public class PeerConnectionManager {
                 Log.d(TAG, "RTP Receive thread terminated.");
             }
         });
+
         _rtpReceiveThread.setName("PeerConnectionRTPReceiver");
         _rtpReceiveThread.setDaemon(true);
         _rtpReceiveThread.setPriority(Thread.MAX_PRIORITY);
@@ -329,13 +313,13 @@ public class PeerConnectionManager {
                 rtcpReceiveSocket.setReceiveBufferSize(PACKET_SIZE * 10);
                 rtcpReceiveSocket.setSoTimeout(RECEIVE_SOCKET_TIMEOUT_MS);
                 _rtcpReceiveSocketRef.set(rtcpReceiveSocket);
-                byte[] buffer = new byte[PACKET_SIZE * 10]; // RTCP packets are usually smaller, but keep buffer size consistent
+                byte[] buffer = new byte[PACKET_SIZE * 10];
 
                 while (_isRunning.get() && !Thread.currentThread().isInterrupted()) {
                     try {
                         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                         rtcpReceiveSocket.receive(packet);
-                        RtcpPacket parsedRtcpPacket = parseRtcpPacket(packet); // New parsing method for RTCP
+                        RtcpPacket parsedRtcpPacket = parseRtcpPacket(packet);
                         if (parsedRtcpPacket != null) {
                             if (!_rtcpPacketQueue.offer(parsedRtcpPacket)) {
                                 _rtcpPacketQueue.poll(); // Drop oldest
@@ -347,9 +331,9 @@ public class PeerConnectionManager {
                         // Expected timeout
                     } catch (SocketException se) {
                         if (!_isRunning.get()) {
-                            Log.d(TAG, "RTCP receive socket closed during shutdown. Exiting RTCP receive thread gracefully.");
+                            Log.d(TAG, "RTCP receive socket closed during shutdown exiting RTCP receive thread");
                         } else {
-                            Log.e(TAG, "Unexpected SocketException in RTCP receive thread: " + se.getMessage(), se);
+                            Log.e(TAG, "SocketException in RTCP receive thread: " + se.getMessage(), se);
                         }
                         break;
                     } catch (Exception e) {
@@ -357,9 +341,9 @@ public class PeerConnectionManager {
                     }
                 }
             } catch (SocketException se) {
-                Log.e(TAG, "Could not open RTCP receive socket on port " + RTCP_PORT + ": " + se.getMessage(), se);
+                Log.e(TAG, "could not open RTCP receive socket on port " + RTCP_PORT + ": " + se.getMessage(), se);
             } catch (Exception e) {
-                Log.e(TAG, "RTCP Receive thread fatal error: " + e.getMessage(), e);
+                Log.e(TAG, "RTCP Receive thread error: " + e.getMessage(), e);
             } finally {
                 DatagramSocket socketToClose = rtcpReceiveSocket != null ? rtcpReceiveSocket : _rtcpReceiveSocketRef.getAndSet(null);
                 if (socketToClose != null && !socketToClose.isClosed()) {
@@ -371,7 +355,7 @@ public class PeerConnectionManager {
         });
         _rtcpReceiveThread.setName("PeerConnectionRTCPReceiver");
         _rtcpReceiveThread.setDaemon(true);
-        _rtcpReceiveThread.setPriority(Thread.NORM_PRIORITY + 1); // Slightly lower than RTP
+        _rtcpReceiveThread.setPriority(Thread.NORM_PRIORITY + 1);
         _rtcpReceiveThread.start();
         Log.d(TAG, "RTCP Receive thread started.");
     }
@@ -388,7 +372,6 @@ public class PeerConnectionManager {
                     rtpBatchPackets.clear();
                     rtcpBatchPackets.clear();
 
-                    // Process RTP packets
                     DataPacket rtpHead = _rtpPacketQueue.poll(50, TimeUnit.MILLISECONDS);
                     if (rtpHead != null) {
                         rtpBatchPackets.add(rtpHead);
@@ -398,28 +381,27 @@ public class PeerConnectionManager {
                         }
                     }
 
-                    // Process RTCP packets
                     RtcpPacket rtcpHead = _rtcpPacketQueue.poll(50, TimeUnit.MILLISECONDS);
                     if (rtcpHead != null) {
                         rtcpBatchPackets.add(rtcpHead);
                         _rtcpPacketQueue.drainTo(rtcpBatchPackets, 19);
                         for (RtcpPacket packet : rtcpBatchPackets) {
-                            processReceivedRtcpPacket(packet); // New processing method for RTCP
+                            processReceivedRtcpPacket(packet);
                         }
                     }
 
                     if (rtpHead == null && rtcpHead == null) {
-                        Thread.sleep(5); // Small sleep if no packets
+                        Thread.sleep(5); //let other threads do stuff
                     }
 
                 } catch (InterruptedException e) {
-                    Log.d(TAG, "Process thread interrupted. Exiting.");
+                    Log.d(TAG, "process thread interrupted exiting");
                     Thread.currentThread().interrupt();
                 } catch (Exception e) {
-                    Log.e(TAG, "Process thread error: " + e.getMessage(), e);
+                    Log.e(TAG, "process thread error: " + e.getMessage(), e);
                 }
             }
-            Log.d(TAG, "Process thread terminated.");
+            Log.d(TAG, "process thread terminated");
         });
 
         _processThread.setName("PeerConnectionProcessor");
@@ -436,7 +418,7 @@ public class PeerConnectionManager {
                 try {
                     Thread.sleep(CLEANUP_MS);
                     cleanupOldFrames();
-                    cleanupOldRtcpStates(); // New: clean up old RTCP states
+                    cleanupOldRtcpStates();
                 } catch (InterruptedException e) {
                     Log.d(TAG, "Cleanup thread interrupted. Exiting.");
                     Thread.currentThread().interrupt();
@@ -450,7 +432,6 @@ public class PeerConnectionManager {
         _cleanupThread.start();
     }
 
-    // New RTCP Sender Thread
     private void startRtcpSenderThread() {
         if (_rtcpSenderThread != null && _rtcpSenderThread.isAlive()) return;
 
@@ -546,8 +527,6 @@ public class PeerConnectionManager {
     }
 
     private ReceiverReportBlock createReceiverReportBlock(RtcpPeerState peerState, long ssrcOfReportedSource) {
-        // Implement logic to calculate these values based on peerState
-        // This is where the core of RTCP reception statistics comes in.
         return new ReceiverReportBlock(
                 ssrcOfReportedSource,
                 peerState.getFractionLost(),
@@ -814,8 +793,6 @@ public class PeerConnectionManager {
         _rtcpPeerStates.computeIfAbsent(rtcpPacket.getSenderCname(), RtcpPeerState::new) // Assuming getSenderCname exists
                 .updateRtcpReceptionStats(rtcpPacket);
 
-        _onRtcpPacketReceived.accept(rtcpPacket); // Pass to listener if registered
-
         // Specific handling for different RTCP types
         if (rtcpPacket instanceof SenderReport) {
             SenderReport sr = (SenderReport) rtcpPacket;
@@ -973,7 +950,7 @@ public class PeerConnectionManager {
 
             ByteBuffer packetBuffer = ByteBuffer.allocate(headerSize + payload.length);
             packetBuffer.put(usernameBytes);
-            packetBuffer.putLong(timestamp); // Directly put long
+            packetBuffer.putLong(timestamp);
             packetBuffer.putInt(i);
             packetBuffer.putInt(totalPackets);
             packetBuffer.put(packetTypeByte);

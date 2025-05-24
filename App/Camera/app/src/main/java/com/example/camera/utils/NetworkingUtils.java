@@ -18,46 +18,46 @@ public class NetworkingUtils {
 
 
     public static String getIPv6Address() {
-        try {
-            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface netInterface = interfaces.nextElement();
-
-                if (!netInterface.isUp() || netInterface.isLoopback()) continue;
-
-                Enumeration<InetAddress> addresses = netInterface.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress address = addresses.nextElement();
-
-                    if (address instanceof Inet6Address &&
-                            !address.isLoopbackAddress() &&
-                            !address.isLinkLocalAddress()) {
-
-                        // IPv6 string may have %wlan0 at end — optional to strip
-                        return address.getHostAddress();
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        return null;
-
 //        try {
-//            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-//                NetworkInterface intf = en.nextElement();
-//                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-//                    InetAddress inetAddress = enumIpAddr.nextElement();
-//                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
-//                        return inetAddress.getHostAddress();
+//            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+//
+//            while (interfaces.hasMoreElements()) {
+//                NetworkInterface netInterface = interfaces.nextElement();
+//
+//                if (!netInterface.isUp() || netInterface.isLoopback()) continue;
+//
+//                Enumeration<InetAddress> addresses = netInterface.getInetAddresses();
+//                while (addresses.hasMoreElements()) {
+//                    InetAddress address = addresses.nextElement();
+//
+//                    if (address instanceof Inet6Address &&
+//                            !address.isLoopbackAddress() &&
+//                            !address.isLinkLocalAddress()) {
+//
+//                        // IPv6 string may have %wlan0 at end — optional to strip
+//                        return address.getHostAddress();
 //                    }
 //                }
 //            }
-//        } catch (SocketException ex) {
-//            ex.printStackTrace();
+//        } catch (SocketException e) {
+//            e.printStackTrace();
 //        }
-//        return "Unavailable";
+//        return null;
+
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        }
+        return "Unavailable";
     }
 
 

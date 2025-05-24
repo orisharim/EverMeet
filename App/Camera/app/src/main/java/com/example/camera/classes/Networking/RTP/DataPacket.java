@@ -1,4 +1,4 @@
-package com.example.camera.classes.Networking;
+package com.example.camera.classes.Networking.RTP;
 
 public class DataPacket {
     private String _username;
