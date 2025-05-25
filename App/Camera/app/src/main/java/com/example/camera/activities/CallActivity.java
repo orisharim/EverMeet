@@ -4,31 +4,42 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.AudioTrack;
+import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.OptIn;
+import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.camera.R;
 import com.example.camera.adapters.CamerasAdapter;
 import com.example.camera.classes.Camera;
+import com.example.camera.classes.Microphone;
 import com.example.camera.classes.Networking.RTP.PacketType;
 import com.example.camera.classes.Room;
+import com.example.camera.classes.Speaker;
 import com.example.camera.classes.User;
 import com.example.camera.databinding.ActivityCallBinding;
 import com.example.camera.managers.DatabaseManager;
 import com.example.camera.managers.PeerConnectionManager;
 import com.example.camera.receivers.InternetConnectionChangeReceiver;
 import com.example.camera.utils.ImageConversionUtils;
+import com.example.camera.utils.PermissionsUtils;
 
 import java.util.HashMap;
 
@@ -43,8 +54,12 @@ public class CallActivity extends AppCompatActivity {
 
     private ActivityCallBinding _views;
     private Camera _localCam;
+    private Speaker _speaker;
+    private Microphone _mic;
+
     private boolean _isCamClosed;
     private boolean _isMuted;
+
     private CamerasAdapter _camerasAdapter;
     private InternetConnectionChangeReceiver _internetConnectionChangeReceiver;
 
@@ -66,6 +81,14 @@ public class CallActivity extends AppCompatActivity {
         setupUIListeners();
         setupPeerFrameListener();
         enableLocalCameraDrag();
+
+        if(PermissionsUtils.hasPermissions(PERMS, this)){
+            setupLocalCamera();
+
+        }
+
+
+
 
         _internetConnectionChangeReceiver = new InternetConnectionChangeReceiver();
         registerInternetConnectionChangeReceiver();
@@ -94,6 +117,19 @@ public class CallActivity extends AppCompatActivity {
                 this::onLocalCamFrameReceive
         );
         _localCam.startLocalCamera();
+    }
+
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private void setupSound(){
+        _speaker = new Speaker(16000);
+        _speaker.start();
+
+        _mic = new Microphone(16000, (data) ->{
+            PeerConnectionManager.getInstance().setDataSupplier(PacketType.AUDIO, () -> {
+                return data;
+            });
+        });
+        _mic.start();
     }
 
     private void setupRoomListener() {
@@ -135,10 +171,16 @@ public class CallActivity extends AppCompatActivity {
 
     private void setupPeerFrameListener() {
         PeerConnectionManager.getInstance().setOnCompleteDataReceived(completeData -> {
-            runOnUiThread(() -> _camerasAdapter.updateParticipantFrame(
-                    completeData.getUsername(),
-                    ImageConversionUtils.byteArrayToBitmap(completeData.getData())
-            ));
+            if(completeData.getPacketType() == PacketType.VIDEO){
+                runOnUiThread(() -> _camerasAdapter.updateParticipantFrame(
+                        completeData.getUsername(),
+                        ImageConversionUtils.byteArrayToBitmap(completeData.getData())
+                ));
+
+            } else if(completeData.getPacketType() == PacketType.AUDIO){
+
+                _speaker.playAudio(completeData.getData());
+            }
         });
     }
 
