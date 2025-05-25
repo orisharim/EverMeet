@@ -25,14 +25,12 @@ import java.util.function.Supplier;
 public class PeerConnectionManager {
     private static final String TAG = "PeerConnectionManager";
     private static final int PACKET_SIZE = 40000;
-    private static final int RTP_PORT = 12345; // Renamed for clarity
-    private static final int RTCP_PORT = 12346; // Dedicated RTCP port
+    private static final int PORT = 12345;
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 2;
     private static final int CLEANUP_MS = 15000;
     private static final int MAX_QUEUE_SIZE = 1000;
     private static final int RECEIVE_SOCKET_TIMEOUT_MS = 500;
-    private static final int RTCP_INTERVAL_MS = 1000; // Send RTCP reports every 1 second
 
     private static final PeerConnectionManager _instance = new PeerConnectionManager();
 
@@ -42,32 +40,21 @@ public class PeerConnectionManager {
 
     private final AtomicInteger _completeFramesReceived = new AtomicInteger(0);
     private final AtomicInteger _packetsSent = new AtomicInteger(0);
-    private final AtomicInteger _rtpPacketsReceived = new AtomicInteger(0); // Track received RTP packets for RTCP
 
     private final ConcurrentHashMap<PacketType, Supplier<byte[]>> _dataSuppliers = new ConcurrentHashMap<>();
     private Consumer<CompleteData> _onCompleteDataReceived = data -> {};
 
     private final List<Connection> _connections = Collections.synchronizedList(new ArrayList<>());
 
-    private final AtomicReference<DatagramSocket> _rtpReceiveSocketRef = new AtomicReference<>();
-    private final AtomicReference<DatagramSocket> _rtcpReceiveSocketRef = new AtomicReference<>();
+    private final AtomicReference<DatagramSocket> _receiveSocketRef = new AtomicReference<>();
 
-
-    private Thread _rtpReceiveThread;
+    private Thread _receiveThread;
     private Thread _processThread;
     private Thread _cleanupThread;
     private Thread _frameCounterThread;
     private Thread _packetCounterThread;
-    private Thread _rtcpSendReceiveThread; // Combined thread for RTCP
 
     private final AtomicBoolean _isRunning = new AtomicBoolean(false);
-
-    private final ConcurrentHashMap<String, Long> _lastRtpTimestampReceived = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Long> _lastRtcpSentTimestamp = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Integer> _packetsExpected = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Integer> _packetsReceived = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Integer> _packetsLost = new ConcurrentHashMap<>();
-
 
     private PeerConnectionManager() {}
 
@@ -87,8 +74,7 @@ public class PeerConnectionManager {
         shutdown();
 
         if (_isRunning.compareAndSet(false, true)) {
-            startRTPReceiveThread();
-            startRTCPThreads();
+            startReceiveThread();
             startProcessThread();
             startCleanupThread();
             startFrameCounterThread();
@@ -107,7 +93,6 @@ public class PeerConnectionManager {
             if (connectedUser != null) {
                 self = connectedUser.getUsername();
             } else {
-                self = "";
                 Log.e(TAG, "Cannot connect to participants - no user connected");
                 shutdown();
                 return;
@@ -116,12 +101,6 @@ public class PeerConnectionManager {
             room.getParticipants().forEach((username, ip) -> {
                 if (!username.equals(self)) {
                     _connections.add(createConnection(username, ip));
-                    // Initialize RTCP state for new peer
-                    _packetsExpected.put(username, 0);
-                    _packetsReceived.put(username, 0);
-                    _packetsLost.put(username, 0);
-                    _lastRtpTimestampReceived.put(username, 0L);
-                    _lastRtcpSentTimestamp.put(username, 0L); // Initialize last RTCP sent timestamp
                 }
             });
 
@@ -156,24 +135,17 @@ public class PeerConnectionManager {
             _connections.clear();
         }
 
-        DatagramSocket rtpReceiveSocket = _rtpReceiveSocketRef.getAndSet(null);
-        if (rtpReceiveSocket != null && !rtpReceiveSocket.isClosed()) {
-            rtpReceiveSocket.close();
-            Log.d(TAG, "RTP Receive socket closed.");
+        DatagramSocket receiveSocket = _receiveSocketRef.getAndSet(null);
+        if (receiveSocket != null && !receiveSocket.isClosed()) {
+            receiveSocket.close();
+            Log.d(TAG, "Receive socket closed.");
         }
 
-        DatagramSocket rtcpReceiveSocket = _rtcpReceiveSocketRef.getAndSet(null);
-        if (rtcpReceiveSocket != null && !rtcpReceiveSocket.isClosed()) {
-            rtcpReceiveSocket.close();
-            Log.d(TAG, "RTCP Receive socket closed.");
-        }
-
-        safelyTerminateThread(_rtpReceiveThread, "RTP Receive");
+        safelyTerminateThread(_receiveThread, "RTP Receive");
         safelyTerminateThread(_processThread, "Process");
         safelyTerminateThread(_cleanupThread, "Cleanup");
         safelyTerminateThread(_frameCounterThread, "FrameCounter");
         safelyTerminateThread(_packetCounterThread, "PacketCounter");
-        safelyTerminateThread(_rtcpSendReceiveThread, "RTCP Send/Receive");
 
         cleanupResourcesUnsafe();
 
@@ -196,20 +168,15 @@ public class PeerConnectionManager {
     }
 
     private void cleanupResourcesUnsafe() {
-        _rtpReceiveThread = null;
+        _receiveThread = null;
         _processThread = null;
         _cleanupThread = null;
         _frameCounterThread = null;
         _packetCounterThread = null;
-        _rtcpSendReceiveThread = null;
 
         _incompleteFrames.clear();
         _packetQueue.clear();
-        _lastRtpTimestampReceived.clear();
-        _packetsExpected.clear();
-        _packetsReceived.clear();
-        _packetsLost.clear();
-        _lastRtcpSentTimestamp.clear();
+
     }
 
     private Connection createConnection(String username, String ip) {
@@ -219,21 +186,21 @@ public class PeerConnectionManager {
         return new Connection(username, ip, sendThread);
     }
 
-    private void startRTPReceiveThread() {
-        if (_rtpReceiveThread != null && _rtpReceiveThread.isAlive()) {
+    private void startReceiveThread() {
+        if (_receiveThread != null && _receiveThread.isAlive()) {
             Log.w(TAG, "RTP Receive thread already running, skipping start.");
             return;
         }
 
-        _rtpReceiveThread = new Thread(() -> {
+        _receiveThread = new Thread(() -> {
             DatagramSocket receiveSocket = null;
 
             try {
-                receiveSocket = new DatagramSocket(RTP_PORT);
+                receiveSocket = new DatagramSocket(PORT);
                 receiveSocket.setReceiveBufferSize(PACKET_SIZE * 10);
                 receiveSocket.setSoTimeout(RECEIVE_SOCKET_TIMEOUT_MS);
 
-                _rtpReceiveSocketRef.set(receiveSocket);
+                _receiveSocketRef.set(receiveSocket);
 
                 byte[] buffer = new byte[PACKET_SIZE * 10];
 
@@ -251,9 +218,7 @@ public class PeerConnectionManager {
                             }
                             _packetQueue.offer(parsedPacket);
                         }
-                        _rtpPacketsReceived.incrementAndGet(); // Increment counter for RTCP
                     } catch (SocketTimeoutException ste) {
-                        // Expected timeout
                     } catch (SocketException se) {
                         if (!_isRunning.get()) {
                             Log.d(TAG, "RTP Receive socket closed during shutdown. Exiting receive thread gracefully.");
@@ -266,11 +231,11 @@ public class PeerConnectionManager {
                     }
                 }
             } catch (SocketException se) {
-                Log.e(TAG, "Could not open RTP receive socket on port " + RTP_PORT + ": " + se.getMessage(), se);
+                Log.e(TAG, "Could not open RTP receive socket on port " + PORT + ": " + se.getMessage(), se);
             } catch (Exception e) {
                 Log.e(TAG, "RTP Receive thread fatal error: " + e.getMessage(), e);
             } finally {
-                DatagramSocket socketToClose = receiveSocket != null ? receiveSocket : _rtpReceiveSocketRef.getAndSet(null);
+                DatagramSocket socketToClose = receiveSocket != null ? receiveSocket : _receiveSocketRef.getAndSet(null);
                 if (socketToClose != null && !socketToClose.isClosed()) {
                     socketToClose.close();
                     Log.d(TAG, "RTP Receive socket explicitly closed in finally block.");
@@ -279,82 +244,12 @@ public class PeerConnectionManager {
             }
         });
 
-        _rtpReceiveThread.setName("PeerConnectionRTPReceiver");
-        _rtpReceiveThread.setDaemon(true);
-        _rtpReceiveThread.setPriority(Thread.MAX_PRIORITY);
-        _rtpReceiveThread.start();
+        _receiveThread.setName("PeerConnectionRTPReceiver");
+        _receiveThread.setDaemon(true);
+        _receiveThread.setPriority(Thread.MAX_PRIORITY);
+        _receiveThread.start();
         Log.d(TAG, "RTP Receive thread started.");
     }
-
-    private void startRTCPThreads() {
-        if (_rtcpSendReceiveThread != null && _rtcpSendReceiveThread.isAlive()) {
-            Log.w(TAG, "RTCP Send/Receive thread already running, skipping start.");
-            return;
-        }
-
-        _rtcpSendReceiveThread = new Thread(() -> {
-            DatagramSocket rtcpSocket = null;
-            try {
-                rtcpSocket = new DatagramSocket(RTCP_PORT);
-                rtcpSocket.setReceiveBufferSize(PACKET_SIZE); // RTCP packets are small
-                rtcpSocket.setSoTimeout(RTCP_INTERVAL_MS / 2); // Shorter timeout for polling
-
-                _rtcpReceiveSocketRef.set(rtcpSocket);
-
-                byte[] buffer = new byte[PACKET_SIZE];
-
-                while (_isRunning.get() && !Thread.currentThread().isInterrupted()) {
-                    try {
-                        // --- Send RTCP Reports ---
-                        long currentTime = System.currentTimeMillis();
-                        synchronized (_connections) {
-                            for (Connection conn : _connections) {
-                                if (currentTime - _lastRtcpSentTimestamp.getOrDefault(conn.getUsername(), 0L) >= RTCP_INTERVAL_MS) {
-                                    sendRTCPReport(rtcpSocket, conn.getUserIp(), conn.getUsername());
-                                    _lastRtcpSentTimestamp.put(conn.getUsername(), currentTime);
-                                }
-                            }
-                        }
-
-                        // --- Receive RTCP Reports ---
-                        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                        rtcpSocket.receive(packet); // This will block until timeout or packet
-
-                        processRTCPPacket(packet);
-
-                    } catch (SocketTimeoutException ste) {
-                        // Expected timeout, just loop again to send and check for new packets
-                    } catch (SocketException se) {
-                        if (!_isRunning.get()) {
-                            Log.d(TAG, "RTCP socket closed during shutdown. Exiting RTCP thread gracefully.");
-                        } else {
-                            Log.e(TAG, "Unexpected SocketException while running RTCP: " + se.getMessage(), se);
-                        }
-                        break;
-                    } catch (Exception e) {
-                        Log.e(TAG, "RTCP thread error: " + e.getMessage(), e);
-                    }
-                }
-            } catch (SocketException se) {
-                Log.e(TAG, "Could not open RTCP socket on port " + RTCP_PORT + ": " + se.getMessage(), se);
-            } catch (Exception e) {
-                Log.e(TAG, "RTCP thread fatal error: " + e.getMessage(), e);
-            } finally {
-                DatagramSocket socketToClose = rtcpSocket != null ? rtcpSocket : _rtcpReceiveSocketRef.getAndSet(null);
-                if (socketToClose != null && !socketToClose.isClosed()) {
-                    socketToClose.close();
-                    Log.d(TAG, "RTCP socket explicitly closed in finally block.");
-                }
-                Log.d(TAG, "RTCP Send/Receive thread terminated.");
-            }
-        });
-        _rtcpSendReceiveThread.setName("PeerConnectionRTCPSendReceive");
-        _rtcpSendReceiveThread.setDaemon(true);
-        _rtcpSendReceiveThread.setPriority(Thread.NORM_PRIORITY);
-        _rtcpSendReceiveThread.start();
-        Log.d(TAG, "RTCP Send/Receive thread started.");
-    }
-
 
     private void startProcessThread() {
         if (_processThread != null && _processThread.isAlive()) return;
@@ -422,8 +317,7 @@ public class PeerConnectionManager {
                 try {
                     Thread.sleep(1000);
                     int count = _completeFramesReceived.getAndSet(0);
-                    int rtpCount = _rtpPacketsReceived.getAndSet(0); // Reset RTP packet counter
-                    Log.i(TAG, "Complete frames received in last second: " + count + ", RTP packets received: " + rtpCount);
+                    Log.i(TAG, "Complete frames received in last second: " + count);
                 } catch (InterruptedException e) {
                     Log.d(TAG, "Frame Counter thread interrupted. Exiting.");
                     Thread.currentThread().interrupt();
@@ -482,15 +376,6 @@ public class PeerConnectionManager {
             byte[] data = datagram.getData();
             ByteBuffer buffer = ByteBuffer.wrap(data, 0, datagram.getLength());
 
-            // Check if this is an RTCP packet based on port
-            if (datagram.getPort() == RTCP_PORT) {
-                // RTCP packets are processed directly, not queued as DataPackets
-                // This scenario shouldn't happen if parsing is correctly separated,
-                // but as a safeguard.
-                Log.w(TAG, "RTCP packet received on RTP port, or parsePacket called incorrectly for RTCP.");
-                return null;
-            }
-
             byte[] usernameBytes = new byte[8];
             buffer.get(usernameBytes);
             String username = new String(usernameBytes).trim();
@@ -517,11 +402,6 @@ public class PeerConnectionManager {
             Log.w(TAG, "Received invalid RTP packet, skipping");
             return;
         }
-
-        // Update RTCP metrics for this sender
-        String senderUsername = packet.getUsername();
-        _packetsReceived.compute(senderUsername, (k, v) -> v == null ? 1 : v + 1);
-        _lastRtpTimestampReceived.put(senderUsername, System.currentTimeMillis());
 
         if (packet.getTimestamp() < _latestTimestamp.get() - CLEANUP_MS) {
             return;
@@ -555,16 +435,9 @@ public class PeerConnectionManager {
                 }
 
                 if (hasGaps) {
-                    // Update expected packets for RTCP feedback
-                    Integer currentExpected = _packetsExpected.getOrDefault(senderUsername, 0);
-                    _packetsExpected.put(senderUsername, Math.max(currentExpected, packet.getTotalPackets()));
                     return;
                 }
             }
-
-            // Update expected packets for RTCP feedback
-            Integer currentExpected = _packetsExpected.getOrDefault(senderUsername, 0);
-            _packetsExpected.put(senderUsername, Math.max(currentExpected, packet.getTotalPackets()));
 
 
             if (packets.size() == packet.getTotalPackets()) {
@@ -575,8 +448,6 @@ public class PeerConnectionManager {
                                 ", got " + packets.get(0).getSequenceNumber() + "-" +
                                 packets.get(packets.size() - 1).getSequenceNumber());
 
-                        // Increment lost packets count for RTCP
-                        _packetsLost.compute(senderUsername, (k, v) -> v == null ? 1 : v + 1);
                         return;
                     }
 
@@ -746,304 +617,48 @@ public class PeerConnectionManager {
 
             for (int i = 0; i < totalPackets; i++) {
                 if (!_isRunning.get() || Thread.currentThread().isInterrupted()) {
-                    Log.d(TAG, "Sending interrupted, sent " + i + "/" + totalPackets + " packets");
-                    return;
+                    break;
                 }
+                int offset = i * payloadSize;
+                int length = Math.min(data.length - offset, payloadSize);
 
-                int start = i * payloadSize;
-                int end = Math.min(start + payloadSize, data.length);
-                byte[] payload = Arrays.copyOfRange(data, start, end);
-
-                ByteBuffer packetBuffer = ByteBuffer.allocate(headerSize + payload.length);
+                ByteBuffer packetBuffer = ByteBuffer.allocate(headerSize + length);
                 packetBuffer.put(usernameBytes);
                 packetBuffer.put(timestampBytes);
-                packetBuffer.putInt(i);
-                packetBuffer.putInt(totalPackets);
+                packetBuffer.putInt(i); // Sequence number
+                packetBuffer.putInt(totalPackets); // Total packets
                 packetBuffer.put(packetTypeByte);
-                packetBuffer.put(payload);
+                packetBuffer.put(data, offset, length);
 
-                sendAndRetry(socket, packetBuffer.array(), receiverIp, RTP_PORT); // Send RTP
-                _packetsSent.incrementAndGet();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error sending RTP packets: " + e.getMessage(), e);
-            throw e;
-        }
-    }
+                byte[] packetData = packetBuffer.array();
+                DatagramPacket packet = new DatagramPacket(packetData, packetData.length, InetAddress.getByName(receiverIp), PORT);
 
-    private void sendAndRetry(DatagramSocket socket, byte[] packetData, String receiverIp, int port) throws Exception {
-        Exception lastException = null;
-        boolean sent = false;
-
-        for (int attempt = 0; attempt < MAX_RETRIES && !sent; attempt++) {
-            try {
-                if (!_isRunning.get() || Thread.currentThread().isInterrupted()) {
-                    throw new InterruptedException("Sending interrupted");
-                }
-
-                if (socket.isClosed()) {
-                    throw new SocketException("Socket closed");
-                }
-
-                InetAddress address = InetAddress.getByName(receiverIp);
-                DatagramPacket packet = new DatagramPacket(packetData, packetData.length, address, port);
-                socket.send(packet);
-                sent = true;
-                return;
-            } catch (PortUnreachableException pue) {
-                Log.w(TAG, "Port unreachable for " + receiverIp + ":" + port + " (Attempt " + (attempt + 1) + "/" + MAX_RETRIES + ")");
-                lastException = pue;
-            } catch (SocketException se) {
-                Log.e(TAG, "Socket exception: " + se.getMessage());
-                lastException = se;
-
-                if (!socket.isClosed()) {
-                    Thread.sleep(RETRY_DELAY_MS * (attempt + 1));
-                } else {
-                    throw se;
-                }
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw ie;
-            } catch (Exception e) {
-                Log.e(TAG, "Error sending to " + receiverIp + ":" + port + " (Attempt " + (attempt + 1) + "/" + MAX_RETRIES + "): " + e.getMessage());
-                lastException = e;
-            }
-
-            if (!sent && attempt < MAX_RETRIES - 1) {
-                Thread.sleep(RETRY_DELAY_MS * (attempt + 1));
-            }
-        }
-
-        if (!sent && lastException != null) {
-            throw lastException;
-        }
-    }
-
-    // --- RTCP Implementation ---
-
-    private void sendRTCPReport(DatagramSocket socket, String receiverIp, String targetUsername) {
-        try {
-            User user = User.getConnectedUser();
-            if (user == null) {
-                Log.e(TAG, "No connected user, cannot send RTCP report.");
-                return;
-            }
-            String senderUsername = user.getUsername();
-
-            // For simplicity, we'll send a Receiver Report (RR) for the targetUsername
-            // A full RTCP implementation would also send Sender Reports (SR) if this peer sends data.
-            // For now, we focus on feedback from receiver to sender.
-
-            int packetsExpected = _packetsExpected.getOrDefault(targetUsername, 0);
-            int packetsReceived = _packetsReceived.getOrDefault(targetUsername, 0);
-            int packetsLost = _packetsLost.getOrDefault(targetUsername, 0);
-
-            // Calculate fraction lost (simple approximation)
-            float fractionLost = 0.0f;
-            if (packetsExpected > 0) {
-                fractionLost = (float) packetsLost / packetsExpected;
-            }
-
-            // In a real scenario, you'd calculate jitter and RTT.
-            // For stability, we'll just focus on loss for now.
-            long lastRtpTimestamp = _lastRtpTimestampReceived.getOrDefault(targetUsername, 0L);
-            long currentTime = System.currentTimeMillis();
-            long delaySinceLastRTP = currentTime - lastRtpTimestamp;
-
-
-            // Construct Receiver Report (RR) Packet
-            // Version (2 bits) = 2
-            // Padding (1 bit) = 0
-            // Reception Report Count (5 bits) = 1 (for one sender)
-            // Packet Type (8 bits) = 201 (RTCP_RR)
-            // Length (16 bits) = 7 (words - header + 1 RR block) -> (4 bytes header + 24 bytes RR block) / 4 = 7
-            // SSRC of sender of this RR (32 bits)
-            // SSRC of source (32 bits) (SSRC of the RTP sender this report is about)
-            // Fraction Lost (8 bits)
-            // Cumulative Number of Packets Lost (24 bits)
-            // Extended Highest Sequence Number Received (32 bits)
-            // Interarrival Jitter (32 bits) - set to 0 for simplicity
-            // Last SR Timestamp (32 bits) - set to 0 for simplicity
-            // Delay Since Last SR (32 bits) - set to 0 for simplicity
-
-            byte[] rtcpPacket = createReceiverReport(
-                    senderUsername,  // SSRC of the sender of this RR
-                    targetUsername,  // SSRC of the RTP source this RR is for
-                    (int) (fractionLost * 255), // Convert fraction to 8-bit
-                    packetsLost,
-                    _lastRtpTimestampReceived.getOrDefault(targetUsername, 0L).intValue(), // Using timestamp as high sequence for simplicity
-                    0, // Jitter
-                    0, // Last SR Timestamp
-                    0  // Delay Since Last SR
-            );
-
-            sendAndRetry(socket, rtcpPacket, receiverIp, RTCP_PORT);
-            Log.d(TAG, "Sent RTCP RR to " + receiverIp + " for " + targetUsername +
-                    ". Lost: " + packetsLost + ", Expected: " + packetsExpected + ", Fraction Lost: " + String.format("%.2f", fractionLost));
-
-            // Reset counts after sending report
-            _packetsExpected.put(targetUsername, 0);
-            _packetsReceived.put(targetUsername, 0);
-            _packetsLost.put(targetUsername, 0);
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error sending RTCP report to " + receiverIp + ": " + e.getMessage(), e);
-        }
-    }
-
-    private byte[] createReceiverReport(
-            String ssrcSender,
-            String ssrcSource,
-            int fractionLost,
-            int cumulativePacketsLost,
-            int extendedHighestSeqNum,
-            int interarrivalJitter,
-            int lastSrTimestamp,
-            int delaySinceLastSr) {
-
-        ByteBuffer buffer = ByteBuffer.allocate(28); // 7 words * 4 bytes/word
-
-        // RTCP Header (201 for Receiver Report, RC=1 for one report block)
-        // V=2, P=0, RC=1, PT=201, Length=7 (words)
-        byte headerByte1 = (byte) ((2 << 6) | (0 << 5) | 1); // Version 2, P=0, RC=1
-        byte headerByte2 = (byte) 201; // PT = 201 (Receiver Report)
-        short length = 7; // Length in 32-bit words, excluding header
-
-        buffer.put(headerByte1);
-        buffer.put(headerByte2);
-        buffer.putShort(length);
-
-        // SSRC of packet sender (this peer)
-        buffer.putInt(ssrcSender.hashCode()); // Simple SSRC from hashcode
-
-        // Reception Report Block (one block)
-        buffer.putInt(ssrcSource.hashCode()); // SSRC of the source (the RTP sender)
-        buffer.put((byte) fractionLost); // Fraction Lost (8 bits)
-        // Cumulative Number of Packets Lost (24 bits) - pad with 0 for byte alignment
-        buffer.put((byte) ((cumulativePacketsLost >> 16) & 0xFF));
-        buffer.putShort((short) (cumulativePacketsLost & 0xFFFF));
-        buffer.putInt(extendedHighestSeqNum); // Extended Highest Sequence Number Received
-        buffer.putInt(interarrivalJitter); // Interarrival Jitter
-        buffer.putInt(lastSrTimestamp); // Last SR Timestamp (LSR)
-        buffer.putInt(delaySinceLastSr); // Delay Since Last SR (DLSR)
-
-        return buffer.array();
-    }
-
-    private void processRTCPPacket(DatagramPacket datagram) {
-        try {
-            byte[] data = datagram.getData();
-            ByteBuffer buffer = ByteBuffer.wrap(data, 0, datagram.getLength());
-
-            byte headerByte1 = buffer.get();
-            byte headerByte2 = buffer.get();
-            short length = buffer.getShort(); // Length in 32-bit words
-
-            int version = (headerByte1 >> 6) & 0x03;
-            int padding = (headerByte1 >> 5) & 0x01;
-            int reportCount = headerByte1 & 0x1F; // RC for RR, SC for SR
-            int packetType = headerByte2 & 0xFF;
-
-            if (version != 2) {
-                Log.w(TAG, "Received RTCP packet with unsupported version: " + version);
-                return;
-            }
-
-            if (packetType == 200) { // Sender Report (SR)
-                Log.d(TAG, "Received RTCP Sender Report (SR)");
-                // SSRC of sender (32 bits)
-                // NTP timestamp (64 bits)
-                // RTP timestamp (32 bits)
-                // Sender's packet count (32 bits)
-                // Sender's octet count (32 bits)
-                int ssrc = buffer.getInt();
-                long ntpTimestamp = buffer.getLong();
-                long rtpTimestamp = buffer.getInt() & 0xFFFFFFFFL; // Convert to unsigned long
-                long senderPacketCount = buffer.getInt() & 0xFFFFFFFFL;
-                long senderOctetCount = buffer.getInt() & 0xFFFFFFFFL;
-
-                String peerUsername = findUsernameBySSRC(ssrc);
-                if (peerUsername != null) {
-                    Log.i(TAG, "SR from " + peerUsername + ": packets=" + senderPacketCount + ", octets=" + senderOctetCount);
-                    // You could use this to track remote sender's stats and calculate RTT
-                } else {
-                    Log.w(TAG, "SR from unknown SSRC: " + ssrc);
-                }
-
-                // Process Reception Report Blocks if present
-                for (int i = 0; i < reportCount; i++) {
-                    if (buffer.remaining() < 24) { // Each RR block is 24 bytes
-                        Log.w(TAG, "Malformed SR: not enough bytes for RR block " + i);
+                int retries = 0;
+                while (retries < MAX_RETRIES) {
+                    try {
+                        socket.send(packet);
+                        _packetsSent.incrementAndGet();
                         break;
+                    } catch (SocketException se) {
+                        if (!_isRunning.get()) {
+                            Log.d(TAG, "Socket closed during shutdown while sending packet. Aborting send.");
+                            return;
+                        }
+                        Log.e(TAG, "Socket error sending packet (retry " + (retries + 1) + "): " + se.getMessage());
+                        retries++;
+                        Thread.sleep(RETRY_DELAY_MS);
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error sending packet (retry " + (retries + 1) + "): " + e.getMessage(), e);
+                        retries++;
+                        Thread.sleep(RETRY_DELAY_MS);
                     }
-                    processReceptionReportBlock(buffer);
                 }
-
-            } else if (packetType == 201) { // Receiver Report (RR)
-                Log.d(TAG, "Received RTCP Receiver Report (RR)");
-                // SSRC of receiver (32 bits)
-                int ssrcOfReceiver = buffer.getInt();
-
-                String peerUsername = findUsernameBySSRC(ssrcOfReceiver);
-                if (peerUsername != null) {
-                    Log.i(TAG, "RR received from " + peerUsername);
-                } else {
-                    Log.w(TAG, "RR from unknown SSRC: " + ssrcOfReceiver);
+                if (retries == MAX_RETRIES) {
+                    Log.e(TAG, "Failed to send packet after " + MAX_RETRIES + " retries.");
                 }
-
-                for (int i = 0; i < reportCount; i++) {
-                    if (buffer.remaining() < 24) { // Each RR block is 24 bytes
-                        Log.w(TAG, "Malformed RR: not enough bytes for RR block " + i);
-                        break;
-                    }
-                    processReceptionReportBlock(buffer);
-                }
-            } else {
-                Log.d(TAG, "Received unknown RTCP packet type: " + packetType);
             }
-
         } catch (Exception e) {
-            Log.e(TAG, "Error processing RTCP packet: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to send packets for type " + type + " to " + receiverIp + ": " + e.getMessage(), e);
         }
-    }
-
-    private void processReceptionReportBlock(ByteBuffer buffer) {
-        int ssrcOfSource = buffer.getInt(); // SSRC of the RTP sender this report is about
-        int fractionLost = buffer.get() & 0xFF;
-        int cumulativePacketsLost = buffer.getInt() & 0xFFFFFF; // 24 bits
-        int extendedHighestSeqNum = buffer.getInt();
-        int interarrivalJitter = buffer.getInt();
-        int lastSrTimestamp = buffer.getInt();
-        int delaySinceLastSr = buffer.getInt();
-
-        String reportedSourceUsername = findUsernameBySSRC(ssrcOfSource);
-        if (reportedSourceUsername != null) {
-            Log.i(TAG, "RTCP RR Block for " + reportedSourceUsername +
-                    ": Fraction Lost=" + (fractionLost / 255.0f) +
-                    ", Cumulative Lost=" + cumulativePacketsLost +
-                    ", Ext. Highest Seq=" + extendedHighestSeqNum +
-                    ", Jitter=" + interarrivalJitter);
-            // You can use this information for congestion control or adaptive bitrate.
-            // For stability, simply logging is a good start.
-        } else {
-            Log.w(TAG, "RTCP RR Block for unknown SSRC source: " + ssrcOfSource);
-        }
-    }
-
-    private String findUsernameBySSRC(int ssrc) {
-        // This is a simplified way to map SSRC back to username.
-        // In a real system, you'd manage SSRC mappings more robustly.
-        // For example, by including SSRC in RTP header and maintaining a map.
-        User user = User.getConnectedUser();
-        if (user != null && user.getUsername().hashCode() == ssrc) {
-            return user.getUsername();
-        }
-        for (Connection conn : _connections) {
-            if (conn.getUsername().hashCode() == ssrc) {
-                return conn.getUsername();
-            }
-        }
-        return null;
     }
 }
