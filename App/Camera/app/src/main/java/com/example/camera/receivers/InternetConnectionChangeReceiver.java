@@ -27,7 +27,6 @@ public class InternetConnectionChangeReceiver extends BroadcastReceiver {
             Activity activity = (Activity) context;
 
             if (!isConnected) {
-                // Show the dialog if it's not already showing
                 if (_internetDialog == null || !_internetDialog.isShowing()) {
                     _internetDialog = new Dialog(activity);
                     _internetDialog.setContentView(R.layout.dialog_no_internet_connection);

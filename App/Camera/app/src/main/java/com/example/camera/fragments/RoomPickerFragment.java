@@ -223,7 +223,8 @@ public class RoomPickerFragment extends Fragment {
         List<Room> filteredRooms = new ArrayList<>();
         rooms.forEach(
                 room -> {
-                    if(User.getConnectedUser().getFriends().contains(room.getCreator())){
+                    if(User.getConnectedUser().getFriends().contains(room.getCreator())
+                            || User.getConnectedUser().getUsername().equals(room.getCreator())){
                         filteredRooms.add(room);
                     }
                 }

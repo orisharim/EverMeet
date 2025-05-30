@@ -3,11 +3,11 @@ package com.example.camera.managers;
 import android.util.Log;
 
 import com.example.camera.classes.*;
-import com.example.camera.classes.Networking.RTP.CompleteData;
-import com.example.camera.classes.Networking.RTP.Connection;
-import com.example.camera.classes.Networking.RTP.DataPacket;
-import com.example.camera.classes.Networking.RTP.FrameIdentifier;
-import com.example.camera.classes.Networking.RTP.PacketType;
+import com.example.camera.classes.Networking.CompleteData;
+import com.example.camera.classes.Networking.Connection;
+import com.example.camera.classes.Networking.DataPacket;
+import com.example.camera.classes.Networking.CompleteDataID;
+import com.example.camera.classes.Networking.PacketType;
 
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -34,7 +34,7 @@ public class PeerConnectionManager {
 
     private static final PeerConnectionManager _instance = new PeerConnectionManager();
 
-    private final ConcurrentHashMap<FrameIdentifier, List<DataPacket>> _incompleteFrames = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CompleteDataID, List<DataPacket>> _incompleteData = new ConcurrentHashMap<>();
     private final LinkedBlockingQueue<DataPacket> _packetQueue = new LinkedBlockingQueue<>(MAX_QUEUE_SIZE);
     private final AtomicLong _latestTimestamp = new AtomicLong(0);
 
@@ -174,7 +174,7 @@ public class PeerConnectionManager {
         _frameCounterThread = null;
         _packetCounterThread = null;
 
-        _incompleteFrames.clear();
+        _incompleteData.clear();
         _packetQueue.clear();
 
     }
@@ -358,8 +358,8 @@ public class PeerConnectionManager {
         long cutoffTime = currentTime - CLEANUP_MS;
 
         int removedFrames = 0;
-        for (Iterator<Map.Entry<FrameIdentifier, List<DataPacket>>> it = _incompleteFrames.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<FrameIdentifier, List<DataPacket>> entry = it.next();
+        for (Iterator<Map.Entry<CompleteDataID, List<DataPacket>>> it = _incompleteData.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<CompleteDataID, List<DataPacket>> entry = it.next();
             if (entry.getKey().getTimestamp() < cutoffTime) {
                 it.remove();
                 removedFrames++;
@@ -411,9 +411,9 @@ public class PeerConnectionManager {
             _latestTimestamp.set(packet.getTimestamp());
         }
 
-        FrameIdentifier key = new FrameIdentifier(packet.getTimestamp(), packet.getUsername(), packet.getPacketType());
+        CompleteDataID key = new CompleteDataID(packet.getTimestamp(), packet.getUsername(), packet.getPacketType());
 
-        List<DataPacket> packets = _incompleteFrames.computeIfAbsent(key, k ->
+        List<DataPacket> packets = _incompleteData.computeIfAbsent(key, k ->
                 Collections.synchronizedList(new ArrayList<>(packet.getTotalPackets())));
 
         synchronized (packets) {
@@ -470,7 +470,7 @@ public class PeerConnectionManager {
                 } catch (Exception e) {
                     Log.e(TAG, "Error assembling packets for " + key + ": " + e.getMessage(), e);
                 } finally {
-                    _incompleteFrames.remove(key);
+                    _incompleteData.remove(key);
                 }
             }
         }
@@ -625,8 +625,8 @@ public class PeerConnectionManager {
                 ByteBuffer packetBuffer = ByteBuffer.allocate(headerSize + length);
                 packetBuffer.put(usernameBytes);
                 packetBuffer.put(timestampBytes);
-                packetBuffer.putInt(i); // Sequence number
-                packetBuffer.putInt(totalPackets); // Total packets
+                packetBuffer.putInt(i);
+                packetBuffer.putInt(totalPackets);
                 packetBuffer.put(packetTypeByte);
                 packetBuffer.put(data, offset, length);
 

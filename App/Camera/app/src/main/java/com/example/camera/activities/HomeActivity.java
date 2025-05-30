@@ -76,6 +76,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(_internetConnectionChangeReceiver);
+        if(_internetConnectionChangeReceiver != null)
+            unregisterReceiver(_internetConnectionChangeReceiver);
     }
 }

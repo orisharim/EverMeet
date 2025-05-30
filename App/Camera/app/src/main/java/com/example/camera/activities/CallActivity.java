@@ -1,18 +1,14 @@
 package com.example.camera.activities;
 
+
 import android.Manifest;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.AudioTrack;
-import android.media.MediaRecorder;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -23,14 +19,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
-import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.camera.R;
 import com.example.camera.adapters.CamerasAdapter;
 import com.example.camera.classes.Camera;
 import com.example.camera.classes.Microphone;
-import com.example.camera.classes.Networking.RTP.PacketType;
+import com.example.camera.classes.Networking.PacketType;
 import com.example.camera.classes.Room;
 import com.example.camera.classes.Speaker;
 import com.example.camera.classes.User;
@@ -72,7 +67,7 @@ public class CallActivity extends AppCompatActivity {
         setFullScreenMode();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        _isCamClosed = true;
+        _isCamClosed = false;
         _isMuted = true;
 
         setupCameraGrid();
@@ -84,7 +79,6 @@ public class CallActivity extends AppCompatActivity {
 
         if(PermissionsUtils.hasPermissions(PERMS, this)){
             setupLocalCamera();
-
         }
 
 
@@ -104,7 +98,7 @@ public class CallActivity extends AppCompatActivity {
     }
 
     private void setupCameraGrid() {
-        _camerasAdapter = new CamerasAdapter();
+        _camerasAdapter = new CamerasAdapter(this, this.getDrawable(R.drawable.cam_off_in_call));
         _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 2));
         _views.camerasGrid.setAdapter(_camerasAdapter);
     }
@@ -163,7 +157,13 @@ public class CallActivity extends AppCompatActivity {
 
         _views.cameraButton.setOnClickListener(v -> {
             _isCamClosed = !_isCamClosed;
-            _views.cameraButton.setImageResource(_isCamClosed ? R.drawable.closed_cam : R.drawable.cam);
+
+            if(_isCamClosed){
+                _views.localCamera.setVisibility(View.INVISIBLE);
+                _views.cameraButton.setImageResource(R.drawable.closed_cam);
+            } else {
+                _views.cameraButton.setImageResource(R.drawable.cam);
+            }
         });
 
         _views.leaveButton.setOnClickListener(v -> leaveCall());
@@ -212,16 +212,16 @@ public class CallActivity extends AppCompatActivity {
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onLocalCamFrameReceive(ImageProxy frame) {
         byte[] frameData;
-//        if(!_isCamClosed) {
+        if(!_isCamClosed) {
             frameData = ImageConversionUtils.bitmapToByteArray(
                     ImageConversionUtils.imageToBitmap(frame.getImage())
             );
-//        }
-//        else{
-//            frameData = ImageConversionUtils.drawableToByteArray(Drawable.createFromPath("res/drawable/cam_off_in_call.xml"));
-//        }
+        }
+        else{
+            frameData = new byte[1];
+        }
 
-            PeerConnectionManager.getInstance().setDataSupplier(PacketType.VIDEO, () -> frameData);
+        PeerConnectionManager.getInstance().setDataSupplier(PacketType.VIDEO, () -> frameData);
 
     }
 

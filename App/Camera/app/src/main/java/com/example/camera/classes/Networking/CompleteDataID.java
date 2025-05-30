@@ -1,13 +1,13 @@
-package com.example.camera.classes.Networking.RTP;
+package com.example.camera.classes.Networking;
 
 import java.util.Objects;
 
-public class FrameIdentifier {
+public class CompleteDataID {
     private final long timestamp;
     private final String username;
     private final PacketType packetType;
 
-    public FrameIdentifier(long timestamp, String username, PacketType packetType) {
+    public CompleteDataID(long timestamp, String username, PacketType packetType) {
         this.timestamp = timestamp;
         this.username = username;
         this.packetType = packetType;
@@ -29,7 +29,7 @@ public class FrameIdentifier {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FrameIdentifier that = (FrameIdentifier) o;
+        CompleteDataID that = (CompleteDataID) o;
         return timestamp == that.timestamp &&
                 Objects.equals(username, that.username) &&
                 packetType == that.packetType;

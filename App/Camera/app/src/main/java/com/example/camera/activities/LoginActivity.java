@@ -20,7 +20,6 @@ import com.example.camera.utils.StorageUtils;
 
 public class LoginActivity extends AppCompatActivity {
 
-
     private static final String TAG = "LoginActivity";
     private static final String[] PERMISSIONS = {
             Manifest.permission.CAMERA,
@@ -53,7 +52,18 @@ public class LoginActivity extends AppCompatActivity {
             attemptAutoLogin();
         }
 
-        setupFormSwitching();
+        _views.switchToSignup.setOnClickListener(v -> {
+            _views.loginCard.setVisibility(View.GONE);
+            _views.signupCard.setVisibility(View.VISIBLE);
+            _views.signupAppName.setVisibility(View.VISIBLE);
+        });
+
+        _views.switchToLogin.setOnClickListener(v -> {
+            _views.signupCard.setVisibility(View.GONE);
+            _views.loginCard.setVisibility(View.VISIBLE);
+            _views.loginAppName.setVisibility(View.VISIBLE);
+        });
+
         setupLoginButton();
         setupSignupButton();
     }
@@ -82,19 +92,6 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void setupFormSwitching() {
-        _views.switchToSignup.setOnClickListener(v -> {
-            _views.loginCard.setVisibility(View.GONE);
-            _views.signupCard.setVisibility(View.VISIBLE);
-            _views.signupAppName.setVisibility(View.VISIBLE);
-        });
-
-        _views.switchToLogin.setOnClickListener(v -> {
-            _views.signupCard.setVisibility(View.GONE);
-            _views.loginCard.setVisibility(View.VISIBLE);
-            _views.loginAppName.setVisibility(View.VISIBLE);
-        });
-    }
 
     private void setupLoginButton() {
         _views.loginButton.setOnClickListener(v -> {

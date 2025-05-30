@@ -1,4 +1,4 @@
-package com.example.camera.classes.Networking.RTP;
+package com.example.camera.classes.Networking;
 
 public class CompleteData {
     private String _username;

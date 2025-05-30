@@ -59,7 +59,12 @@ public class User {
     public static void connectToUser(User user){
         _connectedUser = user;
         if(user != null)
-            DatabaseManager.getInstance().setOnUserDataReceived(user.getUsername(), User::connectToUser);
+            DatabaseManager.getInstance().setOnUserDataReceived(user.getUsername(), newUserData -> {
+                if(_connectedUser != null){
+                    if(newUserData.getUsername().equals(_connectedUser._username))
+                        User.connectToUser(newUserData);
+                }
+            });
     }
 
     public static void disconnectFromConncetedUser() {
