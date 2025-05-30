@@ -162,6 +162,7 @@ public class CallActivity extends AppCompatActivity {
                 _views.localCamera.setVisibility(View.INVISIBLE);
                 _views.cameraButton.setImageResource(R.drawable.closed_cam);
             } else {
+                _views.localCamera.setVisibility(View.VISIBLE);
                 _views.cameraButton.setImageResource(R.drawable.cam);
             }
         });

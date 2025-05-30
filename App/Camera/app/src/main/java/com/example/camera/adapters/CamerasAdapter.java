@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.media.Image;
 import android.view.LayoutInflater;
@@ -64,12 +65,10 @@ public class CamerasAdapter extends RecyclerView.Adapter<CamerasAdapter.CameraVi
             if (canvas != null) {
                 canvas.drawColor(Color.BLACK);
 
-                // Check for null or invalid frame
                 if (frame != null && !frame.isRecycled()) {
-                    canvas.drawBitmap(frame, 0, 0, null);
+                    canvas.drawBitmap(frame, null, new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);
                 } else {
-                    canvas.drawBitmap(_noFrameBitmap, 0, 0, null);
-                }
+                    canvas.drawBitmap(_noFrameBitmap, null, new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);                }
 
                 holder.surfaceHolder.unlockCanvasAndPost(canvas);
             }
