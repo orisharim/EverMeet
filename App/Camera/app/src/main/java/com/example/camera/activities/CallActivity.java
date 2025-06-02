@@ -81,12 +81,8 @@ public class CallActivity extends AppCompatActivity {
             setupLocalCamera();
         }
 
-
-
-
         _internetConnectionChangeReceiver = new InternetConnectionChangeReceiver();
         registerInternetConnectionChangeReceiver();
-
     }
 
     private void setFullScreenMode() {

@@ -22,6 +22,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private ActivityHomeBinding _views;
     private InternetConnectionChangeReceiver _internetConnectionChangeReceiver;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -29,9 +30,8 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(_views.getRoot());
 
         setFullScreenMode();
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT); // Lock orientation
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
-        // Load default fragment
         setFragment(new RoomPickerFragment());
 
         _views.roomPickerFragmentButton.setOnClickListener(v ->

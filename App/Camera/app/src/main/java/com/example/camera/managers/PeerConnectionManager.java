@@ -209,7 +209,7 @@ public class PeerConnectionManager {
                         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                         receiveSocket.receive(packet);
 
-                        DataPacket parsedPacket = parsePacket(packet);
+                        DataPacket parsedPacket = DataPacket.parsePacket(packet);
 
                         if (!_packetQueue.offer(parsedPacket)) {
                             DataPacket dropped = _packetQueue.poll();
@@ -371,31 +371,7 @@ public class PeerConnectionManager {
         }
     }
 
-    private DataPacket parsePacket(DatagramPacket datagram) {
-        try {
-            byte[] data = datagram.getData();
-            ByteBuffer buffer = ByteBuffer.wrap(data, 0, datagram.getLength());
 
-            byte[] usernameBytes = new byte[8];
-            buffer.get(usernameBytes);
-            String username = new String(usernameBytes).trim();
-
-            long timestamp = buffer.getLong();
-            int sequence = buffer.getInt();
-            int total = buffer.getInt();
-            byte packetTypeByte = buffer.get();
-            PacketType packetType = PacketType.fromByte(packetTypeByte);
-
-            int payloadLength = datagram.getLength() - buffer.position();
-            byte[] payload = new byte[payloadLength];
-            buffer.get(payload);
-
-            return new DataPacket(username, timestamp, sequence, total, packetType, payload);
-        } catch (Exception e) {
-            Log.e(TAG, "Error parsing RTP packet: " + e.getMessage(), e);
-            return null;
-        }
-    }
 
     private void processReceivedPacket(DataPacket packet) {
         if (packet == null || packet.getPayload() == null || packet.getUsername() == null) {

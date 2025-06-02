@@ -3,7 +3,7 @@ package com.example.camera.classes.Networking;
 public class CompleteData {
     private String _username;
     private long _timestamp;
-    private PacketType _packetType; // New field for packet type
+    private PacketType _packetType;
     private byte[] _data;
 
     public CompleteData(String username, long timestamp, PacketType packetType, byte[] data) {

@@ -73,7 +73,7 @@ public class Camera {
         if (_cameraProvider != null) {
             _cameraProvider.unbindAll();
         }
-        _cameraExecutor.shutdownNow(); // Stop processing immediately
+        _cameraExecutor.shutdownNow();
     }
 
     private void onFrameReceive(ImageProxy image) {
@@ -84,7 +84,7 @@ public class Camera {
         } catch (Exception e) {
             Log.e("Camera", "Error processing frame", e);
         } finally {
-            image.close(); // ensure image is closed to avoid memory leaks
+            image.close();
         }
     }
 }
