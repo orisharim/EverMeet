@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -95,7 +96,7 @@ public class CallActivity extends AppCompatActivity {
 
     private void setupCameraGrid() {
         _camerasAdapter = new CamerasAdapter(this, this.getDrawable(R.drawable.cam_off_in_call));
-        _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 2));
+        _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 4));
         _views.camerasGrid.setAdapter(_camerasAdapter);
     }
 
@@ -115,6 +116,7 @@ public class CallActivity extends AppCompatActivity {
         _speaker.start();
 
         _mic = new Microphone(16000, (data) ->{
+            Log.e("EEE", "EEE");
             PeerConnectionManager.getInstance().setDataSupplier(PacketType.AUDIO, () -> {
                 return data;
             });
