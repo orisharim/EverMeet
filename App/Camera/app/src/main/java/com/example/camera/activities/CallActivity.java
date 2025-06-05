@@ -5,6 +5,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
@@ -20,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.camera.R;
@@ -77,6 +79,17 @@ public class CallActivity extends AppCompatActivity {
         setupUIListeners();
         setupPeerFrameListener();
         enableLocalCameraDrag();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        setupSound();
 
         if(PermissionsUtils.hasPermissions(PERMS, this)){
             setupLocalCamera();
@@ -116,7 +129,6 @@ public class CallActivity extends AppCompatActivity {
         _speaker.start();
 
         _mic = new Microphone(16000, (data) ->{
-            Log.e("EEE", "EEE");
             PeerConnectionManager.getInstance().setDataSupplier(PacketType.AUDIO, () -> {
                 return data;
             });

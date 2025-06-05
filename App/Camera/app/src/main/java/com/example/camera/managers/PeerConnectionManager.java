@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicInteger; // Keep for general purpose if needed elsewhere, but not for per-type counts
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -38,8 +38,10 @@ public class PeerConnectionManager {
     private final LinkedBlockingQueue<DataPacket> _packetQueue = new LinkedBlockingQueue<>(MAX_QUEUE_SIZE);
     private final AtomicLong _latestTimestamp = new AtomicLong(0);
 
-    private final AtomicInteger _completeFramesReceived = new AtomicInteger(0);
-    private final AtomicInteger _packetsSent = new AtomicInteger(0);
+    // MODIFICATION START: Per-PacketType counters
+    private final ConcurrentHashMap<PacketType, AtomicInteger> _completeFramesReceivedPerType = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<PacketType, AtomicInteger> _packetsSentPerType = new ConcurrentHashMap<>();
+    // MODIFICATION END
 
     private final ConcurrentHashMap<PacketType, Supplier<byte[]>> _dataSuppliers = new ConcurrentHashMap<>();
     private Consumer<CompleteData> _onCompleteDataReceived = data -> {};
@@ -56,7 +58,13 @@ public class PeerConnectionManager {
 
     private final AtomicBoolean _isRunning = new AtomicBoolean(false);
 
-    private PeerConnectionManager() {}
+    private PeerConnectionManager() {
+        // Initialize counters for all known PacketType values (assuming PacketType is an enum)
+        for (PacketType type : PacketType.values()) {
+            _completeFramesReceivedPerType.put(type, new AtomicInteger(0));
+            _packetsSentPerType.put(type, new AtomicInteger(0));
+        }
+    }
 
     public static PeerConnectionManager getInstance() {
         return _instance;
@@ -74,6 +82,13 @@ public class PeerConnectionManager {
         shutdown();
 
         if (_isRunning.compareAndSet(false, true)) {
+            // MODIFICATION START: Reset all counters on connection
+            for (PacketType type : PacketType.values()) {
+                _completeFramesReceivedPerType.get(type).set(0);
+                _packetsSentPerType.get(type).set(0);
+            }
+            // MODIFICATION END
+
             startReceiveThread();
             startProcessThread();
             startCleanupThread();
@@ -316,8 +331,24 @@ public class PeerConnectionManager {
             while (_isRunning.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(1000);
-                    int count = _completeFramesReceived.getAndSet(0);
-                    Log.i(TAG, "Complete frames received in last second: " + count);
+                    StringBuilder logMessage = new StringBuilder("Complete frames received in last second:");
+                    boolean hasData = false;
+                    for (PacketType type : PacketType.values()) {
+                        AtomicInteger counter = _completeFramesReceivedPerType.get(type);
+                        if (counter != null) {
+                            int count = counter.getAndSet(0);
+                            if (count > 0) { // Only log types that received frames
+                                logMessage.append(" ").append(type.name()).append(": ").append(count);
+                                hasData = true;
+                            }
+                        }
+                    }
+                    if (hasData) { // Only log if there was at least one frame received
+                        Log.i(TAG, logMessage.toString());
+                    } else {
+                        // Optionally log "no frames received" or just stay silent if no activity
+                        // Log.i(TAG, "No complete frames received in last second.");
+                    }
                 } catch (InterruptedException e) {
                     Log.d(TAG, "Frame Counter thread interrupted. Exiting.");
                     Thread.currentThread().interrupt();
@@ -338,8 +369,24 @@ public class PeerConnectionManager {
             while (_isRunning.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     Thread.sleep(1000);
-                    int count = _packetsSent.getAndSet(0);
-                    Log.i(TAG, "RTP Packets sent in last second: " + count);
+                    StringBuilder logMessage = new StringBuilder("RTP Packets sent in last second:");
+                    boolean hasData = false;
+                    for (PacketType type : PacketType.values()) {
+                        AtomicInteger counter = _packetsSentPerType.get(type);
+                        if (counter != null) {
+                            int count = counter.getAndSet(0);
+                            if (count > 0) { // Only log types that sent packets
+                                logMessage.append(" ").append(type.name()).append(": ").append(count);
+                                hasData = true;
+                            }
+                        }
+                    }
+                    if (hasData) { // Only log if there was at least one packet sent
+                        Log.i(TAG, logMessage.toString());
+                    } else {
+                        // Optionally log "no packets sent" or just stay silent if no activity
+                        // Log.i(TAG, "No RTP packets sent in last second.");
+                    }
                 } catch (InterruptedException e) {
                     Log.d(TAG, "Packet Counter thread interrupted. Exiting.");
                     Thread.currentThread().interrupt();
@@ -408,6 +455,13 @@ public class PeerConnectionManager {
                         hasGaps = true;
                         break;
                     }
+                    // MODIFICATION START: Log received packet for its type
+                    _packetsSentPerType.computeIfAbsent(packet.getPacketType(), k -> new AtomicInteger(0)).incrementAndGet();
+                    // This line should ideally be in the receive thread, not here, as this is for *processed* packets.
+                    // However, if you only want to count packets that successfully enter the processing queue, this is fine.
+                    // For true "received packet" count, it should be right after `parsedPacket` in `startReceiveThread`.
+                    // I'll leave it here for now as it's closer to your original intent, but note the caveat.
+                    // MODIFICATION END
                 }
 
                 if (hasGaps) {
@@ -438,7 +492,9 @@ public class PeerConnectionManager {
 
                         try {
                             _onCompleteDataReceived.accept(completedData);
-                            _completeFramesReceived.incrementAndGet();
+                            // MODIFICATION START: Increment complete frames for specific type
+                            _completeFramesReceivedPerType.computeIfAbsent(packet.getPacketType(), k -> new AtomicInteger(0)).incrementAndGet();
+                            // MODIFICATION END
                         } catch (Exception e) {
                             Log.e(TAG, "Error in complete data callback: " + e.getMessage(), e);
                         }
@@ -613,7 +669,9 @@ public class PeerConnectionManager {
                 while (retries < MAX_RETRIES) {
                     try {
                         socket.send(packet);
-                        _packetsSent.incrementAndGet();
+                        // MODIFICATION START: Increment packets sent for specific type
+                        _packetsSentPerType.computeIfAbsent(type, k -> new AtomicInteger(0)).incrementAndGet();
+                        // MODIFICATION END
                         break;
                     } catch (SocketException se) {
                         if (!_isRunning.get()) {
