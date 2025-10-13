@@ -17,11 +17,9 @@ import java.util.List;
 public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.FriendViewHolder> {
     private static final String TAG = "FriendsAdapter";
     private List<String> _friends;
-    private String _currentUser;
 
     public FriendsAdapter() {
         this._friends = new ArrayList<>();
-        this._currentUser = User.getConnectedUser().getUsername();
     }
 
     public void setFriends(List<String> _friends) {

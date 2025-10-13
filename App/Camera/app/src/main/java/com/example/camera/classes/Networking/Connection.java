@@ -1,4 +1,4 @@
-package com.example.camera.classes;
+package com.example.camera.classes.Networking;
 
 public class Connection {
     private String _username;

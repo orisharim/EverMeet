@@ -19,11 +19,9 @@ import java.util.List;
 public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdapter.RequestViewHolder> {
     private static final String TAG = "FriendRequestAdapter";
     private List<String> _requests;
-    private String _currentUser;
 
     public FriendRequestAdapter(List<String> requests) {
         _requests = requests;
-        _currentUser = User.getConnectedUser().getUsername();
     }
 
     public FriendRequestAdapter() {
@@ -48,7 +46,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
         holder.username.setText(requester);
 
         holder.accept.setOnClickListener(v -> {
-            DatabaseManager.getInstance().acceptFriendRequest(_currentUser, requester, success -> {
+            DatabaseManager.getInstance().acceptFriendRequest(User.getConnectedUser().getUsername(), requester, success -> {
                 if (success) {
                     _requests.remove(position);
                     notifyItemRemoved(position);
@@ -57,7 +55,7 @@ public class FriendRequestAdapter extends RecyclerView.Adapter<FriendRequestAdap
         });
 
         holder.decline.setOnClickListener(v -> {
-            DatabaseManager.getInstance().removeFriendRequest(_currentUser, requester, aBoolean -> {});
+            DatabaseManager.getInstance().removeFriendRequest(User.getConnectedUser().getUsername(), requester, aBoolean -> {});
             _requests.remove(position);
             notifyItemRemoved(position);
         });

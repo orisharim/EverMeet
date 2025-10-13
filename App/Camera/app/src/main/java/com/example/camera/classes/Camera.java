@@ -30,7 +30,7 @@ public class Camera {
         _selectedCamera = selectedCamera;
         _activity = activity;
         _previewView = previewView;
-        _cameraExecutor = Executors.newFixedThreadPool(2); // Increased threads for performance
+        _cameraExecutor = Executors.newFixedThreadPool(4);
         _onFrameReceived = onFrameReceived;
     }
 
@@ -44,7 +44,7 @@ public class Camera {
             try {
                 _cameraProvider = cameraProviderFuture.get();
                 _cameraPreview = new Preview.Builder()
-                                     .setTargetResolution(new Size(1280, 720)).build();
+                                     .setTargetResolution(new Size(640, 480)).build();
                 _cameraPreview.setSurfaceProvider(_previewView.getSurfaceProvider());
 
                 _cameraProvider.unbindAll();
@@ -54,7 +54,6 @@ public class Camera {
                         .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
                         .build();
 
-                // Run the frame analysis on a separate thread (NOT the main thread)
                 _frameReader.setAnalyzer(_cameraExecutor, this::onFrameReceive);
 
                 androidx.camera.core.Camera camera = _cameraProvider.bindToLifecycle(
@@ -74,7 +73,7 @@ public class Camera {
         if (_cameraProvider != null) {
             _cameraProvider.unbindAll();
         }
-        _cameraExecutor.shutdownNow(); // Stop processing immediately
+        _cameraExecutor.shutdownNow();
     }
 
     private void onFrameReceive(ImageProxy image) {
@@ -85,7 +84,7 @@ public class Camera {
         } catch (Exception e) {
             Log.e("Camera", "Error processing frame", e);
         } finally {
-            image.close(); // ensure image is closed to avoid memory leaks
+            image.close();
         }
     }
 }

@@ -60,4 +60,16 @@ public class NetworkingUtils {
         return "Unavailable";
     }
 
+
+    public static boolean isConnectedToInternet(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (cm != null) {
+            NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+            return activeNetwork != null && activeNetwork.isConnected();
+        }
+
+        return false;
+    }
+
 }

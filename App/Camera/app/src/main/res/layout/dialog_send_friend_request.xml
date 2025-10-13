@@ -4,7 +4,10 @@
     android:orientation="vertical"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="@drawable/dialog_background"
+    android:gravity="center"
+    android:elevation="8dp">
 
 
     <com.google.android.material.textfield.TextInputLayout

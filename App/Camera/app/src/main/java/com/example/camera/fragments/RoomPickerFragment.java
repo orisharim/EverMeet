@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.*;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
@@ -24,7 +25,9 @@ import com.example.camera.receivers.RoomSchedulerReceiver;
 import com.example.camera.utils.NetworkingUtils;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 public class RoomPickerFragment extends Fragment {
@@ -32,42 +35,44 @@ public class RoomPickerFragment extends Fragment {
     private static final String TAG = "RoomPickerFragment";
     private static final SimpleDateFormat DATE_FORMAT =
             new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
+    private static final int MAX_ROOM_NAME_LENGTH = 8;
 
-    private FragmentRoomPickerBinding binding;
-    private RoomAdapter roomAdapter;
+    private FragmentRoomPickerBinding _views;
+    private RoomAdapter _roomAdapter;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentRoomPickerBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        _views = FragmentRoomPickerBinding.inflate(inflater, container, false);
+        return _views.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        initRecyclerView();
-        binding.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
-        DatabaseManager.getInstance().setOnRoomsDataChange(roomAdapter::setRooms);
-    }
 
-    private void initRecyclerView() {
-        roomAdapter = new RoomAdapter(this::joinRoom);
-        binding.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.roomsRecyclerView.setAdapter(roomAdapter);
+        _roomAdapter = new RoomAdapter(this::joinRoom);
+        _views.roomsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        _views.roomsRecyclerView.setAdapter(_roomAdapter);
+
+        _views.createRoomButton.setOnClickListener(this::showCreateRoomDialog);
+        _views.helloUsernameText.setText("Hello, " + User.getConnectedUser().getUsername());
+
+
+        DatabaseManager.getInstance().getRoomsData(this::updateRoomsUI);
+        DatabaseManager.getInstance().setOnRoomsDataReceived(this::updateRoomsUI);
     }
 
     @SuppressLint("ScheduleExactAlarm")
     private void showCreateRoomDialog(View view) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        builder.setTitle("Create room");
-
         View dialogView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_room_creator, null);
         builder.setView(dialogView);
 
         AlertDialog dialog = builder.create();
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
         EditText roomNameInput = dialogView.findViewById(R.id.dialogRoomName);
         Button createButton = dialogView.findViewById(R.id.dialogCreateRoomButton);
@@ -82,6 +87,10 @@ public class RoomPickerFragment extends Fragment {
             String roomName = roomNameInput.getText().toString().trim();
             if (roomName.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter a room name.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if(roomName.length() > MAX_ROOM_NAME_LENGTH){
+                Toast.makeText(requireContext(), "Room name must be at most " + MAX_ROOM_NAME_LENGTH + " characters", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -136,32 +145,41 @@ public class RoomPickerFragment extends Fragment {
     }
 
     private void pickDateTime(Calendar[] scheduledTime,
-                              TextView scheduledTimeText,
-                              ImageButton cancelScheduleButton) {
+                              TextView timeText,
+                              ImageButton cancelButton) {
         Calendar now = Calendar.getInstance();
 
-        new DatePickerDialog(
-                requireContext(),
+        DatePickerDialog datePickerDialog = new DatePickerDialog(requireContext(),
                 R.style.TimePickerDialogTheme,
-                (view, year, month, dayOfMonth) -> new TimePickerDialog(
-                        requireContext(),
-                        R.style.TimePickerDialogTheme,
-                        (timeView, hourOfDay, minute) -> {
-                            Calendar selected = Calendar.getInstance();
-                            selected.set(year, month, dayOfMonth, hourOfDay, minute);
-                            scheduledTime[0] = selected;
+                (view, year, month, dayOfMonth) -> {
 
-                            scheduledTimeText.setText("Scheduled for: " + DATE_FORMAT.format(selected.getTime()));
-                            cancelScheduleButton.setVisibility(View.VISIBLE);
-                        },
-                        now.get(Calendar.HOUR_OF_DAY),
-                        now.get(Calendar.MINUTE),
-                        true
-                ).show(),
+                    TimePickerDialog timePickerDialog = new TimePickerDialog(requireContext(),
+                            R.style.TimePickerDialogTheme,
+                            (timeView, hourOfDay, minute) -> {
+
+                                Calendar selected = Calendar.getInstance();
+                                selected.set(year, month, dayOfMonth, hourOfDay, minute, 0);
+                                selected.set(Calendar.MILLISECOND, 0);
+
+
+                                scheduledTime[0] = selected;
+                                timeText.setText("Scheduled for: " + DATE_FORMAT.format(selected.getTime()));
+                                cancelButton.setVisibility(View.VISIBLE);
+                                
+                            },
+                            now.get(Calendar.HOUR_OF_DAY),
+                            now.get(Calendar.MINUTE),
+                            true);
+
+
+                    timePickerDialog.show();
+                },
                 now.get(Calendar.YEAR),
                 now.get(Calendar.MONTH),
-                now.get(Calendar.DAY_OF_MONTH)
-        ).show();
+                now.get(Calendar.DAY_OF_MONTH));
+
+        datePickerDialog.getDatePicker().setMinDate(System.currentTimeMillis());
+        datePickerDialog.show();
     }
 
     private void createRoom(String roomName) {
@@ -174,7 +192,7 @@ public class RoomPickerFragment extends Fragment {
                                 User.getConnectedUser(),
                                 NetworkingUtils.getIPv6Address(),
                                 room,
-                                success -> moveToCallActivity()
+                                success -> startActivity(new Intent(getActivity(), CallActivity.class))
                         );
                     }
 
@@ -192,18 +210,33 @@ public class RoomPickerFragment extends Fragment {
                 room,
                 success -> {
                     Room.connectToRoom(room);
-                    moveToCallActivity();
+                    startActivity(new Intent(getActivity(), CallActivity.class));
                 });
     }
 
-    private void moveToCallActivity() {
-        Intent intent = new Intent(getActivity(), CallActivity.class);
-        startActivity(intent);
+    private void updateRoomsUI(List<Room> rooms){
+        if(User.getConnectedUser().getFriends() == null){
+            _roomAdapter.setRooms(new ArrayList<Room>());
+            return;
+        }
+
+        List<Room> filteredRooms = new ArrayList<>();
+        rooms.forEach(
+                room -> {
+                    if(User.getConnectedUser().getFriends().contains(room.getCreator())
+                            || User.getConnectedUser().getUsername().equals(room.getCreator())){
+                        filteredRooms.add(room);
+                    }
+                }
+        );
+
+        _roomAdapter.setRooms(filteredRooms);
     }
+
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        _views = null;
     }
 }

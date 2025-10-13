@@ -81,6 +81,10 @@ public class Room {
             PeerConnectionManager.getInstance().shutdown();
     }
 
+    public static void disconnectFromRoom(){
+        connectToRoom(null);
+    }
+
     @NonNull
     @Override
     public String toString() {

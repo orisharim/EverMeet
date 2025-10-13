@@ -7,7 +7,6 @@
     app:cardCornerRadius="8dp"
     app:cardElevation="8dp">
 
-    <!-- Friend Username -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -28,6 +27,7 @@
             android:id="@+id/deleteFriendButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:layout_gravity="right"
             android:backgroundTint="@android:color/holo_red_dark"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:padding="8dp"

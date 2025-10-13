@@ -51,7 +51,18 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
                     if (usernameResult) {
                         DatabaseManager.getInstance().checkPassword(username, password, passwordResult -> {
                             if (passwordResult) {
-                                addUser(context, username, password, () -> connectToRoom(context, room));
+                                DatabaseManager.getInstance().getUser(username, new DatabaseManager.OnUserLoaded() {
+                                    @Override
+                                    public void onSuccess(User user) {
+                                        connectToRoom(context, room);
+                                    }
+
+                                    @Override
+                                    public void onFail() {
+                                        Toast.makeText(context, "couldnt log in", Toast.LENGTH_SHORT).show();
+
+                                    }
+                                });
                                 deleteNotification(context);
                             } else {
                                 Toast.makeText(context, "Wrong password", Toast.LENGTH_SHORT).show();
@@ -86,10 +97,10 @@ public class RoomSchedulerReceiver extends BroadcastReceiver {
     }
 
     private void addUser(Context context, String username, String password, Runnable onSuccess) {
-        DatabaseManager.getInstance().addUser(username, password, new DatabaseManager.OnUserAdded() {
+        DatabaseManager.getInstance().addNewUser(username, password, new DatabaseManager.OnUserAdded() {
             @Override
             public void onSuccess(User user) {
-                User.setConnectedUser(user);
+                User.connectToUser(user);
                 onSuccess.run();
             }
 

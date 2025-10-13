@@ -19,7 +19,7 @@
         android:id="@+id/buttonMenu"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
+        android:layout_gravity="right"
         android:backgroundTint="@color/white"
         android:orientation="horizontal"
         android:padding="4dp">
@@ -29,7 +29,7 @@
             android:id="@+id/friendRequestAcceptButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
+            android:layout_gravity="right"
             android:text="Accept"
             android:backgroundTint="@color/white"
             android:textColor="@color/black"/>
@@ -38,7 +38,7 @@
             android:id="@+id/friendRequestDeclineButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end"
+            android:layout_gravity="right"
             android:text="Decline"
             android:backgroundTint="@color/white"
             android:textColor="@color/black"/>

@@ -1,47 +1,65 @@
 package com.example.camera.activities;
 
+
 import android.Manifest;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.GridLayout;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.OptIn;
+import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ExperimentalGetImage;
 import androidx.camera.core.ImageProxy;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.camera.R;
 import com.example.camera.adapters.CamerasAdapter;
-import com.example.camera.databinding.ActivityCallBinding;
-import com.example.camera.managers.PeerConnectionManager;
 import com.example.camera.classes.Camera;
-import com.example.camera.managers.DatabaseManager;
-import com.example.camera.utils.ImageConversionUtils;
+import com.example.camera.classes.Microphone;
+import com.example.camera.classes.Networking.PacketType;
 import com.example.camera.classes.Room;
+import com.example.camera.classes.Speaker;
 import com.example.camera.classes.User;
+import com.example.camera.databinding.ActivityCallBinding;
+import com.example.camera.managers.DatabaseManager;
+import com.example.camera.managers.PeerConnectionManager;
+import com.example.camera.receivers.InternetConnectionChangeReceiver;
+import com.example.camera.utils.ImageConversionUtils;
+import com.example.camera.utils.PermissionsUtils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class CallActivity extends AppCompatActivity {
+
     private static final String TAG = "CallActivity";
-    private final static String[] PERMS = {Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.INTERNET};
+    private static final String[] PERMS = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.INTERNET
+    };
+
     private ActivityCallBinding _views;
     private Camera _localCam;
+    private Speaker _speaker;
+    private Microphone _mic;
 
     private boolean _isCamClosed;
     private boolean _isMuted;
 
     private CamerasAdapter _camerasAdapter;
+    private InternetConnectionChangeReceiver _internetConnectionChangeReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,30 +67,74 @@ public class CallActivity extends AppCompatActivity {
         _views = ActivityCallBinding.inflate(getLayoutInflater());
         setContentView(_views.getRoot());
 
+        setFullScreenMode();
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
-        // hide navigation bar
+        _isCamClosed = false;
+        _isMuted = true;
+
+        setupCameraGrid();
+        setupLocalCamera();
+        setupRoomListener();
+        setupUIListeners();
+        setupPeerFrameListener();
+        enableLocalCameraDrag();
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        setupSound();
+
+        if(PermissionsUtils.hasPermissions(PERMS, this)){
+            setupLocalCamera();
+        }
+
+        _internetConnectionChangeReceiver = new InternetConnectionChangeReceiver();
+        registerInternetConnectionChangeReceiver();
+    }
+
+    private void setFullScreenMode() {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                         | View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
         );
+    }
 
-        // lock orientation
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-
-        _camerasAdapter = new CamerasAdapter();
-        _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 2)); // 2 columns grid
+    private void setupCameraGrid() {
+        _camerasAdapter = new CamerasAdapter(this, this.getDrawable(R.drawable.cam_off_in_call));
+        _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 4));
         _views.camerasGrid.setAdapter(_camerasAdapter);
+    }
 
-        _localCam = new Camera(CameraSelector.DEFAULT_FRONT_CAMERA, this, _views.localCamera, this::onLocalCamFrameReceive);
+    private void setupLocalCamera() {
+        _localCam = new Camera(
+                CameraSelector.DEFAULT_FRONT_CAMERA,
+                this,
+                _views.localCamera,
+                this::onLocalCamFrameReceive
+        );
         _localCam.startLocalCamera();
+    }
 
-        _isMuted = true;
-        _isCamClosed = true;
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private void setupSound(){
+        _speaker = new Speaker(16000);
+        _speaker.start();
 
-        _views.camerasGrid.setLayoutManager(new GridLayoutManager(this, 2));
+        _mic = new Microphone(16000, (data) ->{
+            PeerConnectionManager.getInstance().setDataSupplier(PacketType.AUDIO, () -> {
+                if(_isMuted)
+                    return new byte[1];
+                return data;
+            });
+        });
+        _mic.start();
+    }
 
-        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {
+    private void setupRoomListener() {
+        String roomId = Room.getConnectedRoom().getId();
+        DatabaseManager.getInstance().setOnRoomDataReceived(roomId, room -> {
             if (room == null) {
                 Toast.makeText(this, "Room closed", Toast.LENGTH_SHORT).show();
                 leaveCall();
@@ -81,38 +143,55 @@ public class CallActivity extends AppCompatActivity {
 
             Room.connectToRoom(room);
 
-            if (Room.getConnectedRoom() != null) {
-                HashMap<String, Bitmap> otherParticipantsCameras = new HashMap<>();
-                for (String username : Room.getConnectedRoom().getParticipants().keySet()) {
-                    if (!username.equals(User.getConnectedUser().getUsername()))
-                        otherParticipantsCameras.put(username, Bitmap.createBitmap(300, 300, Bitmap.Config.ALPHA_8));
+            HashMap<String, Bitmap> otherParticipantsCameras = new HashMap<>();
+            for (String username : room.getParticipants().keySet()) {
+                if (!username.equals(User.getConnectedUser().getUsername())) {
+                    otherParticipantsCameras.put(username, Bitmap.createBitmap(300, 300, Bitmap.Config.ALPHA_8));
                 }
-
-                _camerasAdapter.setParticipants(otherParticipantsCameras);
             }
-        });
 
-        _views.micButton.setOnClickListener(view -> {
+            _camerasAdapter.setParticipants(otherParticipantsCameras);
+        });
+    }
+
+
+    private void setupUIListeners() {
+        _views.micButton.setOnClickListener(v -> {
             _isMuted = !_isMuted;
             _views.micButton.setImageResource(_isMuted ? R.drawable.muted_mic : R.drawable.mic);
         });
 
-        _views.cameraButton.setOnClickListener(view -> {
+        _views.cameraButton.setOnClickListener(v -> {
             _isCamClosed = !_isCamClosed;
-            _views.cameraButton.setImageResource(_isCamClosed ? R.drawable.closed_cam : R.drawable.cam);
+
+            if(_isCamClosed){
+                _views.localCamera.setVisibility(View.INVISIBLE);
+                _views.cameraButton.setImageResource(R.drawable.closed_cam);
+            } else {
+                _views.localCamera.setVisibility(View.VISIBLE);
+                _views.cameraButton.setImageResource(R.drawable.cam);
+            }
         });
 
-        _views.leaveButton.setOnClickListener(view -> leaveCall());
+        _views.leaveButton.setOnClickListener(v -> leaveCall());
+    }
 
-        PeerConnectionManager.getInstance().setOnCompleteDataReceived(data -> {
-            runOnUiThread(() -> {
-                _camerasAdapter.updateParticipantFrame(
-                        data.getUsername(),
-                        ImageConversionUtils.byteArrayToBitmap(data.getPayload())
-                );
-            });
+    private void setupPeerFrameListener() {
+        PeerConnectionManager.getInstance().setOnCompleteDataReceived(completeData -> {
+            if(completeData.getPacketType() == PacketType.VIDEO){
+                runOnUiThread(() -> _camerasAdapter.updateParticipantFrame(
+                        completeData.getUsername(),
+                        ImageConversionUtils.byteArrayToBitmap(completeData.getData())
+                ));
+
+            } else if(completeData.getPacketType() == PacketType.AUDIO){
+
+                _speaker.playAudio(completeData.getData());
+            }
         });
+    }
 
+    private void enableLocalCameraDrag() {
         _views.localCameraFrame.setOnTouchListener(new View.OnTouchListener() {
             private float dX, dY;
 
@@ -123,7 +202,6 @@ public class CallActivity extends AppCompatActivity {
                         dX = v.getX() - event.getRawX();
                         dY = v.getY() - event.getRawY();
                         return true;
-
                     case MotionEvent.ACTION_MOVE:
                         v.animate()
                                 .x(event.getRawX() + dX)
@@ -131,7 +209,6 @@ public class CallActivity extends AppCompatActivity {
                                 .setDuration(0)
                                 .start();
                         return true;
-
                     default:
                         return false;
                 }
@@ -141,36 +218,54 @@ public class CallActivity extends AppCompatActivity {
 
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void onLocalCamFrameReceive(ImageProxy frame) {
-        byte[] frameData = ImageConversionUtils.bitmapToByteArray(ImageConversionUtils.imageToBitmap(frame.getImage()));
-        PeerConnectionManager.getInstance().setDataSupplier(() -> frameData);
+        byte[] frameData;
+        if(!_isCamClosed) {
+            frameData = ImageConversionUtils.bitmapToByteArray(
+                    ImageConversionUtils.imageToBitmap(frame.getImage())
+            );
+        }
+        else{
+            frameData = new byte[1];
+        }
+
+        PeerConnectionManager.getInstance().setDataSupplier(PacketType.VIDEO, () -> frameData);
+
     }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        if (Room.getConnectedRoom() != null)
-            leaveCall();
+        if (Room.getConnectedRoom() != null) leaveCall();
     }
 
     @Override
-    public void onStop() {
+    protected void onStop() {
         super.onStop();
-        if (Room.getConnectedRoom() != null)
-            leaveCall();
+        if (Room.getConnectedRoom() != null) leaveCall();
     }
 
     private void leaveCall() {
         PeerConnectionManager.getInstance().shutdown();
         _localCam.stopCamera();
-        DatabaseManager.getInstance().setOnRoomDataChange(Room.getConnectedRoom().getId(), room -> {});
-        DatabaseManager.getInstance().removeUserFromRoom(User.getConnectedUser(), Room.getConnectedRoom(), success -> {});
+        DatabaseManager.getInstance().setOnRoomDataReceived(Room.getConnectedRoom().getId(), room -> {});
+        DatabaseManager.getInstance().removeUserFromRoom(
+                User.getConnectedUser(),
+                Room.getConnectedRoom(),
+                success -> {}
+        );
         startActivity(new Intent(this, HomeActivity.class));
     }
 
+    private void registerInternetConnectionChangeReceiver(){
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(_internetConnectionChangeReceiver, filter);
+    }
 
-
-
-
-
-
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(_internetConnectionChangeReceiver);
+    }
 }
+

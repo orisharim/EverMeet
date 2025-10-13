@@ -1,8 +1,12 @@
 package com.example.camera.adapters;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.media.Image;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -14,13 +18,24 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.camera.R;
+import com.example.camera.utils.ImageConversionUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class CamerasAdapter extends RecyclerView.Adapter<CamerasAdapter.CameraViewHolder> {
-    private final HashMap<String, Bitmap> _participants = new HashMap<>();
-    private final ArrayList<String> _participantsUsernames = new ArrayList<>();
+
+    private final HashMap<String, Bitmap> _participants;
+    private final ArrayList<String> _participantsUsernames;
+    private final Bitmap _noFrameBitmap;
+
+    public CamerasAdapter(Context context, Drawable noFrameDrawable){
+        _participants = new HashMap<>();
+        _participantsUsernames = new ArrayList<>();
+
+
+        _noFrameBitmap = ImageConversionUtils.drawableToBitmap(noFrameDrawable);
+    }
 
     public void setParticipants(HashMap<String, Bitmap> participants) {
         _participants.clear();
@@ -28,6 +43,7 @@ public class CamerasAdapter extends RecyclerView.Adapter<CamerasAdapter.CameraVi
 
         _participantsUsernames.clear();
         _participantsUsernames.addAll(participants.keySet());
+
 
         notifyDataSetChanged();
     }
@@ -44,11 +60,16 @@ public class CamerasAdapter extends RecyclerView.Adapter<CamerasAdapter.CameraVi
         String username = _participantsUsernames.get(position);
         Bitmap frame = _participants.get(username);
 
-        if (frame != null && holder.surfaceHolder.getSurface().isValid()) {
+        if (holder.surfaceHolder.getSurface().isValid()) {
             Canvas canvas = holder.surfaceHolder.lockCanvas();
             if (canvas != null) {
                 canvas.drawColor(Color.BLACK);
-                canvas.drawBitmap(frame, 0, 0, null);
+
+                if (frame != null && !frame.isRecycled()) {
+                    canvas.drawBitmap(frame, null, new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);
+                } else {
+                    canvas.drawBitmap(_noFrameBitmap, null, new Rect(0, 0, canvas.getWidth(), canvas.getHeight()), null);                }
+
                 holder.surfaceHolder.unlockCanvasAndPost(canvas);
             }
         }
